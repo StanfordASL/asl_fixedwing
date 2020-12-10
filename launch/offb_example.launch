@@ -1,0 +1,7 @@
+<launch>
+  <!-- This is an example launch file that runs the offb_example.cpp node found at
+       https://dev.px4.io/v1.10/en/ros/mavros_offboard.html.
+
+  <node name="offboard_ctrl" pkg="fixedwing" type="offb_example" />
+
+</launch>
