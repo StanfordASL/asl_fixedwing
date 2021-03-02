@@ -137,7 +137,7 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/fixedwing_node.cpp)
 
-add_executable(offb_example src/offb_example.cpp)
+add_executable(position src/examples/position.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -154,7 +154,7 @@ add_executable(offb_example src/offb_example.cpp)
 #   ${catkin_LIBRARIES}
 # )
 
-target_link_libraries(offb_example ${catkin_LIBRARIES})
+target_link_libraries(position ${catkin_LIBRARIES})
 
 #############
 ## Install ##
