@@ -13,7 +13,7 @@
     <arg name="est" default="ekf2"/>
     <arg name="vehicle" default="fixedwing"/>
     <arg name="world" default="$(find asl_fixedwing)/worlds/empty.world"/>
-    <arg name="sdf" default="$(find asl_fixedwing)/models/$(arg vehicle)/$(arg vehicle).sdf"/>
+    <arg name="sdf" default="$(find asl_fixedwing)/models/gazebo/$(arg vehicle).sdf"/>
 
     <!-- gazebo configs -->
     <arg name="gui" default="true"/>

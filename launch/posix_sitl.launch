@@ -12,9 +12,9 @@
     <!-- vehicle model and world -->
     <arg name="est" default="ekf2"/>
     <!-- <arg name="vehicle" default="plane"/> -->
-    <arg name="vehicle" default="fixedwing"/>
+    <arg name="vehicle" default="fixedwing_gazebo"/>
     <arg name="world" default="$(find asl_fixedwing)/worlds/empty.world"/>
-    <arg name="sdf" default="$(find asl_fixedwing)/models/$(arg vehicle)/$(arg vehicle).sdf"/>
+    <arg name="sdf" default="$(find asl_fixedwing)/models/gazebo/$(arg vehicle).sdf"/>
     <env name="PX4_SIM_MODEL" value="$(arg vehicle)" />
     <env name="PX4_ESTIMATOR" value="$(arg est)" />
 
