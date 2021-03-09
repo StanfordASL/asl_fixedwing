@@ -1,7 +1,8 @@
 /**
  * @file position.cpp
- * @brief A simple offboard control example for fixed wing, consisting of a simple position
- * setpoint command. Arming and switch to offboard mode is not automated.
+ * @brief A simple offboard control example for fixed wing, 
+ * consisting of a simple position setpoint command. 
+ * Arming and switch to offboard mode is not automated.
  *
  */
 

@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<launch>
+	<node pkg="asl_fixedwing" type="rompc_node" name="rompc_node" output="screen">
+		<param name="T_RESET" value="1.0" />
+		<param name="CTRL_RATE" value="200.0" />
+	</node>
+</launch>

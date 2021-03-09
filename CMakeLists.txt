@@ -11,8 +11,10 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  mavros
   mavros_msgs
   geometry_msgs
+  tf
 )
 
 ## System dependencies are found with CMake's conventions
@@ -118,7 +120,7 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+  include
   ${catkin_INCLUDE_DIRS}
 )
 
@@ -155,6 +157,11 @@ add_executable(position src/examples/position.cpp)
 # )
 
 target_link_libraries(position ${catkin_LIBRARIES})
+
+
+add_executable(rompc_node src/rompc/rompc_node.cpp
+	src/utils.cpp)
+target_link_libraries(rompc_node ${catkin_LIBRARIES})
 
 #############
 ## Install ##

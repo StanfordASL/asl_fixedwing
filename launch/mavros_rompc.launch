@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- MAVROS -->
+	<arg name="fcu_url" default="udp://:14540@localhost:14557"/>
+    <include file="$(find mavros)/launch/px4.launch">
+        <arg name="fcu_url" value="$(arg fcu_url)"/>
+    </include>
+
+	<!-- ROMPC -->
+
+</launch>

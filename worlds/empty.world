@@ -35,7 +35,7 @@
       <real_time_update_rate>250</real_time_update_rate>
       <magnetic_field>6.0e-6 2.3e-5 -4.2e-5</magnetic_field>
     </physics>
-    <!-- Code for following the fixedwing aircraft
+    <!-- Code for following the fixedwing aircraft -->
     <gui fullscreen='0'>
      <camera name="user_camera">
         <track_visual>
@@ -46,6 +46,6 @@
           <inherit_yaw>true</inherit_yaw>
         </track_visual>
     </camera>
-   </gui> -->
+   </gui>
   </world>
 </sdf>

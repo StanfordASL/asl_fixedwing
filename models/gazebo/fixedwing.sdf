@@ -40,7 +40,7 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>model://fixedwing/meshes/fixedwing.dae</uri>
+            <uri>model://gazebo/meshes/fixedwing.dae</uri>
           </mesh>
         </geometry>
         <material>
@@ -123,7 +123,7 @@
         <geometry>
           <mesh>
             <scale>0.75 0.75 0.75</scale>
-            <uri>model://fixedwing/meshes/propeller_cw.dae</uri>
+            <uri>model://gazebo/meshes/propeller_cw.dae</uri>
           </mesh>
         </geometry>
         <material>
