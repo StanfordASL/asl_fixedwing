@@ -1,3 +1,10 @@
+"""
+    @file gazebo/model.py
+    Defines a model of the gazebo simulator aircraft
+    and provides functionality to linearize about a
+    steady level flight condition.
+"""
+
 import numpy as np
 from casadi import *
 
@@ -242,6 +249,5 @@ if __name__ == "__main__":
     # Compute an equilibrium
     S = 25. # m/s
     psi = np.deg2rad(0.) # rad
-    
     A, B, x0, u0 = linearized_aircraft_slf(S, psi)
 
