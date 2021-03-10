@@ -7,6 +7,7 @@
 
 import numpy as np
 from casadi import *
+import sys
 
 # Vehicle parameters
 M = 1.5 # kg
@@ -167,6 +168,12 @@ def equilibrium(S, heading):
                       sol[3],      # th
                       heading))    # psi
     usol = sol[4:]
+    residual = np.sum(np.abs(np.array(aircraft(xsol,usol))))
+    print('residual (should be zero): {:.6f}'.format(residual))
+    
+    if residual > .0001:
+        print('Equilibrium calculation did not converge.')
+        sys.exit()
     print('speed S = {} m/s'.format(S))
     print('u = {:.2f} m/s, v = 0 m/s, w = {:.2f} m/s'.format(sol[0], sol[2]))
     print('p = 0 rad/s, q = 0 rad/s, r = 0 rad/s')
@@ -175,7 +182,7 @@ def equilibrium(S, heading):
     print('d_lw = {:.2f} deg, d_rw = {:.2f} deg'.format(*np.rad2deg(sol[5:7])))
     print('d_e = {:.2f} deg, d_r = {:.2f} deg'.format(*np.rad2deg(sol[7:])))
     
-    print('If control surface deflections are too large try increasing speed!')
+    print('If control surface deflections are too large try increasing speed!\n\n')
     return xsol, usol
 
 def aircraft_slf(x0, u0):
@@ -242,7 +249,11 @@ def linearized_aircraft_slf(S, psi):
     J = np.array(f.jacobian()(x0, u0, np.zeros(12)))
     A = J[0:12, 0:12]
     B = J[0:12, 12:]
-    return A, B, x0, u0
+
+    # Compute output matrices
+    C = np.eye(12)
+    H = np.vstack((C[3:6,:], C[9:,:]))
+    return A, B, C, H, x0, u0
 
 
 if __name__ == "__main__":

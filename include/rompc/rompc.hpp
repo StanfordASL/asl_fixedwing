@@ -22,6 +22,9 @@ private:
 	Eigen::VectorXd _xhat; // ROM state estimate
 	Eigen::VectorXd _u; // control to be applied
 
+	Eigen::VectorXd _x_eq; // linearization state
+	Eigen::VectorXd _u_eq; // linearization control
+
 	void update_sim_rom(const double t);
 
 public:

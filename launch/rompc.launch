@@ -3,5 +3,7 @@
 	<node pkg="asl_fixedwing" type="rompc_node" name="rompc_node" output="screen">
 		<param name="T_RESET" value="1.0" />
 		<param name="CTRL_RATE" value="200.0" />
+        <param name="CTRL_PATH" value="$(find asl_fixedwing)/src/rompc/" />
+        <param name="MODEL" value="gazebo" />
 	</node>
 </launch>

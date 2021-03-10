@@ -55,6 +55,24 @@ int main(int argc, char **argv) {
 		ROS_INFO("Using default control rate of 200 Hz");
 	}
 
+	std::string CTRL_PATH; // model name, gazebo or skywalker
+	if (!nh.getParam("/rompc_node/CTRL_PATH", CTRL_PATH)) {
+		ROS_INFO("Need to define controller parameters directory path");
+	    exit(1);
+	}
+
+	std::string MODEL = "gazebo"; // model name, gazebo or skywalker
+	if (!nh.getParam("/rompc_node/MODEL", MODEL)) {
+		ROS_INFO("Need to define model name");
+		exit(1);
+	}
+	std::string filepath = CTRL_PATH + MODEL;
+	ROS_INFO("Loading controller parameters from" + filepath);
+
+	// Initialize controller
+	ROMPC ctrl(filepath);
+	// ctrl.init();
+
 	// Define rate for the node
 	ros::Rate rate(CTRL_RATE);
 
@@ -86,9 +104,7 @@ int main(int argc, char **argv) {
 	double t_last_reset = t0;
 	double dt;
 	
-	// Initialize controller
-	//ROMPC ctrl(filename);
-	//ctrl.init();
+	
 
 	
 	while(ros::ok()) {
