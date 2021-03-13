@@ -13,7 +13,7 @@
 #include <math.h>
 
 /** Save matrix to .csv file. */
-void Utils::save_matrix(std::string file_name, Eigen::MatrixXd matrix) {
+void Utils::save_matrix(const std::string& file_name, Eigen::MatrixXd matrix) {
 	const static Eigen::IOFormat CSVFormat(Eigen::FullPrecision, 
 										Eigen::DontAlignCols, ", ", "\n");
 	std::ofstream file(file_name); // open a file to write
@@ -25,8 +25,12 @@ void Utils::save_matrix(std::string file_name, Eigen::MatrixXd matrix) {
 }
 
 /** Load matrix from .csv file */
-Eigen::MatrixXd Utils::load_matrix(std::string file_name) {
+Eigen::MatrixXd Utils::load_matrix(const std::string& file_name) {
 	std::ifstream file(file_name); // open a file to read
+	if (!file.good()) {
+		std::cerr << "File: " << file_name << " does not exist" << std::endl;
+		exit(1);
+	}
 	
 	// Read through file and extract all data elements
 	std::string row;
@@ -44,6 +48,11 @@ Eigen::MatrixXd Utils::load_matrix(std::string file_name) {
 	// Convert vector into matrix of proper shape
 	return Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(entries.data(), i, entries.size() / i);
 }
+
+/** Load vector from .csv file */
+Eigen::VectorXd Utils::load_vector(const std::string& file_name) {
+    Eigen::MatrixXd M = Utils::load_matrix(file_name);
+    return Eigen::Map<Eigen::VectorXd>(M.data(), M.rows());
 
 
 
