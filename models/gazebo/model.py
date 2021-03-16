@@ -69,8 +69,8 @@ def aerodynamics(x, u):
                     -D_rw*sin(a) - L_rw*cos(a))
 
     # Elevator
-    D_e = fabs(CDA_E*(a - A0_W))*q*S_E
-    L_e = (CLA_E*(a - A0_W) + CLD_E*u[3])*q*S_E
+    D_e = fabs(CDA_E*(a - A0_E))*q*S_E
+    L_e = (CLA_E*(a - A0_E) + CLD_E*u[3])*q*S_E
     F_e = vertcat(-D_e*cos(a) + L_e*sin(a),
                     0.0,
                     -D_e*sin(a) - L_e*cos(a))
@@ -134,7 +134,8 @@ def equilibrium(S, heading):
     const = vertcat(aircraft(x, u)[0:6],              # equilibrium
                     norm_2(uvw) - S,                  # specified velocity
                     uvw[1],                           # no sideways motion
-                    uvw[2]*cos(th) - uvw[0]*sin(th))  # constant altitude
+                    uvw[2]*cos(th) - uvw[0]*sin(th),  # constant altitude
+					u[1] - u[2])					  # aileron anti-symmetry
 
     # Bounds on the decision variables u, v, w, th, u[0:5]
     lb = [-inf, -inf, -inf, -inf, 0, -D_MAX, -D_MAX, -D_MAX, -D_MAX]
@@ -143,7 +144,7 @@ def equilibrium(S, heading):
     # Find a equilibrium point by solving a nonlinear
     # optimization problem by minimizing the control effort
     # at the solution
-    f = (u[1]/D_MAX)**2 + (u[2]/D_MAX)**2 \
+    f = (u[1]/D_MAX)**2 \
         + (u[3]/D_MAX)**2 + (u[4]/D_MAX)**2
     nlp = {'x':vertcat(uvw, th, u),
            'p':vertcat(pqr, phi, psi),
@@ -156,7 +157,7 @@ def equilibrium(S, heading):
     z_guess[0] = S
     tol = .00001
     sol = opt(x0=z_guess, p=np.zeros(5), 
-            lbg=-tol*np.ones(9), ubg=tol*np.ones(9),
+            lbg=-tol*np.ones(10), ubg=tol*np.ones(10),
             lbx=lb, ubx=ub)
 
     # Extract solution
@@ -182,7 +183,6 @@ def equilibrium(S, heading):
     print('d_lw = {:.2f} deg, d_rw = {:.2f} deg'.format(*np.rad2deg(sol[5:7])))
     print('d_e = {:.2f} deg, d_r = {:.2f} deg'.format(*np.rad2deg(sol[7:])))
     
-    print('If control surface deflections are too large try increasing speed!\n\n')
     return xsol, usol
 
 def aircraft_slf(x0, u0):
@@ -258,7 +258,6 @@ def linearized_aircraft_slf(S, psi):
 
 if __name__ == "__main__":
     # Compute an equilibrium
-    S = 25. # m/s
+    S = 13. # m/s
     psi = np.deg2rad(0.) # rad
-    A, B, x0, u0 = linearized_aircraft_slf(S, psi)
-
+    A, B, C, H, x0, u0 = linearized_aircraft_slf(S, psi)
