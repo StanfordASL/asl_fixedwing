@@ -6,12 +6,12 @@ Fixed Wing Aircraft Control
 # Setup
 
 ## QP Solver
-Use qpOASES as the QP solver.
+Use qpOASES as the QP solver. Note we are using the asl-v3.2.0 branch instead of the asl-v3.2.1 branch due to an unresolved issue with linking against the qpOASES library with v3.2.1.
 
 ```
-git clone https://github.com/coin-or/qpOASES.git
+git clone https://github.com/jlorenze/qpOASES.git
 cd <install-dir>
-git checkout tags/releases/3.2.1
+git checkout -b asl-v3.2.0
 mkdir bin
 make
 ```

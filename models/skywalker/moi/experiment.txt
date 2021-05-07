@@ -1,0 +1,59 @@
+Aircraft + Cradle Assembly
+
+
+Mass of aircraft + cradle: m = 3512 g
+
+z-axis:
+Distance from front of cradle to connection point: 16.25 cm (i.e. x-distance from front of cradle to assembly c.m.)
+Distance between filars: D = 49 cm
+Length of filars: h = 191 cm
+
+x-axis:
+Distance from top of cradle to connection point: 16.5 cm (i.e. z-distance from top of cradle to assembly c.m.)
+Distance between filars: D = 49 cm
+Length of filars: h = 114.5 cm
+
+y-axis:
+Length from pivot axis to center of gravity of aircraft + cradle system: l = 186 cm
+
+
+
+Cradle Only
+Mass of cradle: m = 1042 g
+
+z-axis:
+Distance from front of cradle to connection point: 21.5 cm (i.e. x-distance from front of cradle to cradle c.m.)
+Distance between filars: D = 49 cm
+Length of filars: h = 144 cm
+
+x-axis:
+Distance from top of cradle to connection point: 10 cm (i.e. z-distance from top of cradle to cradle c.m.)
+Distance between filars: D = 49 cm
+Length of filars: h = 144 cm
+
+y-axis:
+Length from pivot axis to center of gravity of cradle: l = 179 cm
+
+
+
+Aircraft only
+Mass of aircraft: m = 2470 g
+
+Body x: parallel to carbon fiber tube and wooden baseplate
+Body y: straight out the right wing
+Body z: straight down, perpindicular to x and y axes
+
+Center of gravity:
+@Capture hook: 522 g
+@Fuselage line: 1952 g
+Distance between the points: L = 104.5 cm
+Calculated distance from Fuselage line to c.m.: 22.0 cm
+Calculated distance from Capture hook to c.m.: 82.5 cm
+Estimated distance from nose: 36.5 cm
+Estimated distance from carbon fiber tube/fuselage connection: 22.5 cm
+Estimated distance from leading edge to carbon fiber tube/fuselage connection: 30 cm
+Estimated distance from leading edge to c.m.: 7.5 cm
+
+Estimated distance from top of the cradle to the aircraft c.m.: L_a = 19.25 cm (based on distances from assembly and cradle, and their masses)
+Height of cradle: 29.25 cm
+Estimated distance from bottom of cradle to aircraft c.m.: 10 cm (essentially the bottom of the aircraft to the aircraft c.m. distance)
