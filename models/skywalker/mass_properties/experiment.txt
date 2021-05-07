@@ -49,11 +49,13 @@ Center of gravity:
 Distance between the points: L = 104.5 cm
 Calculated distance from Fuselage line to c.m.: 22.0 cm
 Calculated distance from Capture hook to c.m.: 82.5 cm
-Estimated distance from nose: 36.5 cm
-Estimated distance from carbon fiber tube/fuselage connection: 22.5 cm
+Estimated distance of c.m. from nose: 36.5 cm
+Estimated distance of c.m. from carbon fiber tube/fuselage connection: 22.5 cm
 Estimated distance from leading edge to carbon fiber tube/fuselage connection: 30 cm
 Estimated distance from leading edge to c.m.: 7.5 cm
 
 Estimated distance from top of the cradle to the aircraft c.m.: L_a = 19.25 cm (based on distances from assembly and cradle, and their masses)
 Height of cradle: 29.25 cm
 Estimated distance from bottom of cradle to aircraft c.m.: 10 cm (essentially the bottom of the aircraft to the aircraft c.m. distance)
+
+Measured distance from bottom of aircraft to the propeller motor axis: 20.5 cm
