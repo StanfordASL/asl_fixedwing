@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   mavros
   mavros_msgs
+  gazebo_msgs
   geometry_msgs
   tf
 )
@@ -160,9 +161,13 @@ target_link_libraries(position ${catkin_LIBRARIES})
 
 
 add_executable(rompc_node src/rompc/rompc_node.cpp
-	src/utils.cpp)
+	src/utils/data.cpp
+	src/rompc/rompc.cpp)
 target_link_libraries(rompc_node ${catkin_LIBRARIES})
 
+add_executable(sysid_actuator_ctrl src/sysid/sysid_actuator_ctrl.cpp
+	src/utils/rotation.cpp)
+target_link_libraries(sysid_actuator_ctrl ${catkin_LIBRARIES})
 #############
 ## Install ##
 #############

@@ -1,19 +1,23 @@
 /**
-	@file node.cpp
+	@file rompc_node.cpp
 	ROS node for running ROMPC controller.
 
 	@brief Does stuff.
 */
 
 #include <rompc/rompc.hpp>
-#include <utils.hpp>
+#include <rompc/rompc_utils.hpp>
+
 #include <ros/ros.h>
 #include <ros/console.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/TwistStamped.h>
 #include <mavros_msgs/State.h>
 #include <mavros_msgs/ActuatorControl.h>
 #include <mavros_msgs/AttitudeTarget.h>
 #include <string>
+#include <iostream>
+#include <Eigen/Dense>
 
 // Callback function for the MAVROS State message
 bool px4_connected; // PX4 connection exists
@@ -28,6 +32,10 @@ void state_cb(const mavros_msgs::State::ConstPtr& msg) {
 
 void ctrl_cb(const mavros_msgs::ActuatorControl::ConstPtr& msg) {}
 
+void pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg) {}
+
+void twist_cb(const geometry_msgs::TwistStamped::ConstPtr& msg) {}
+
 int main(int argc, char **argv) {
 	ros::init(argc, argv, "rompc_node");
 	ros::NodeHandle nh;
@@ -35,14 +43,18 @@ int main(int argc, char **argv) {
 	// Define subscribers
 	ros::Subscriber state_sub = nh.subscribe<mavros_msgs::State>
 				("mavros/state", 10, state_cb);
-
-	// Subscribe to actuator messages from PX4
 	ros::Subscriber ctrl_sub = nh.subscribe<mavros_msgs::ActuatorControl>
-				("mavros/target_actuator_control", 10, ctrl_cb);
+				("mavros/target_actuator_control", 10, ctrl_cb); // pre-mixer actuator commands
+	ros::Subscriber pose_sub = nh.subscribe<geometry_msgs::PoseStamped>
+				("mavros/local_position/pose", 10, pose_cb);
+	ros::Subscriber twist_sub = nh.subscribe<geometry_msgs::TwistStamped>
+				("mavros/local_position/velocity", 10, twist_cb);
 
 	// Define publishers
 	ros::Publisher att_cmd_pub = nh.advertise<mavros_msgs::AttitudeTarget>
 				("mavros/setpoint_raw/attitude", 10);
+	ros::Publisher act_cmd_pub = nh.advertise<mavros_msgs::ActuatorControl>
+				("mavros/actuator_control", 10);
 
 	// Access parameters
 	double T_RESET = 5.0; // seconds between resetting controller before activated
@@ -61,36 +73,23 @@ int main(int argc, char **argv) {
 	    exit(1);
 	}
 
-	std::string MODEL = "gazebo"; // model name, gazebo or skywalker
+	std::string MODEL; // model name, gazebo or skywalker
 	if (!nh.getParam("/rompc_node/MODEL", MODEL)) {
 		ROS_INFO("Need to define model name");
 		exit(1);
 	}
 	std::string filepath = CTRL_PATH + MODEL;
-	ROS_INFO("Loading controller parameters from" + filepath);
+	ROS_INFO("Loading controller parameters from %s", filepath.c_str());
 
 	// Initialize controller
-	ROMPC ctrl(filepath);
+	//ROMPC ctrl(filepath);
 	// ctrl.init();
 
 	// Define rate for the node
 	ros::Rate rate(CTRL_RATE);
 
-	mavros_msgs::AttitudeTarget att_cmd;
-	att_cmd.type_mask = mavros_msgs::AttitudeTarget::IGNORE_ATTITUDE;
-	att_cmd.body_rate.x = 0.0;
-	att_cmd.body_rate.y = 0.0;
-	att_cmd.body_rate.z = 0.0;
-	att_cmd.thrust = 0.0;
-
-	// Test
-	Eigen::MatrixXd test;
-	test.setIdentity(3,3);
-	Utils::save_matrix("test.csv", test);
-	
-	Eigen::MatrixXd test2;
-	test2 = Utils::load_matrix("test.csv");
-	Utils::save_matrix("test2.csv", test2);
+	mavros_msgs::ActuatorControl act_cmd;
+	act_cmd.group_mix = mavros_msgs::ActuatorControl::PX4_MIX_FLIGHT_CONTROL;
 
 	// Wait for FCU connection
 	while(ros::ok() && !px4_connected) {
@@ -103,9 +102,7 @@ int main(int argc, char **argv) {
 	double t = t0;
 	double t_last_reset = t0;
 	double dt;
-	
-	
-
+	Eigen::VectorXd u_nrmlzd;
 	
 	while(ros::ok()) {
 		// Each call to spinOnce will result in subscriber callbacks
@@ -119,8 +116,11 @@ int main(int argc, char **argv) {
 		// TODO
 
 		// Get control
-		//u = ctrl.control(y);
-
+		//ctrl.update(y);
+		
+		// Convert control into normalized units
+		//u_nrmlzd = Plane::normalize_control(ctrl.get_u());
+		
 		if (px4_mode != "OFFBOARD" && t - t_last_reset > T_RESET) {
 			//ctrl.init(x0);
 			ROS_INFO("Reinitializing ROMPC controller");
@@ -130,7 +130,7 @@ int main(int argc, char **argv) {
 
 		// Add a check on ROMPC controller failure and
 		// have backup be a loiter or something using a change mode
-		att_cmd_pub.publish(att_cmd);
+		act_cmd_pub.publish(act_cmd);
 		rate.sleep(); // sleep for remaining time
 	}
 }

@@ -98,7 +98,10 @@ def quat_to_axis(q):
 
     Returns th, a
     """
-    return 2*np.arccos(q[0]), np.array([q[1]/np.sqrt(1 - q[0]**2),
+	if np.sqrt(1 - q[0]**2) < 1e-6:
+		return 0.0, np.array([1.0, 0.0, 0.0])
+	else:
+    	return 2*np.arccos(q[0]), np.array([q[1]/np.sqrt(1 - q[0]**2),
                                         q[2]/np.sqrt(1 - q[0]**2),
                                         q[3]/np.sqrt(1 - q[0]**2)])
 

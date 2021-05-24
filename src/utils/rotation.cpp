@@ -1,72 +1,23 @@
 /**
-	@file utils.cpp
-	Helper functions
+	@file rotation.cpp
+	Utilities for expressing and converting rotations of reference frames
+
+	@brief All of the rotation parameterizations here represent rotations
+	of an initial fixed frame to a new frame. Therefore using these
+	parameterizations to operate on a vector is the same as transforming
+	the new frame coordinates into the original fixed frame.
+
+	Examples if rotation describes relation of body w.r.t. inertial
+	(how to rotate inertial to body):
+	R: coverts body frame coordinates into inertial frame coordinates
+	euler: usual roll-pitch-yaw of body frame w.r.t inertial frame
+
 */
 
-#include <utils.hpp>
+#include <utils/rotation.hpp>
 
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <vector>
 #include <Eigen/Dense>
-#include <math.h>
-
-/** Save matrix to .csv file. */
-void Utils::save_matrix(const std::string& file_name, Eigen::MatrixXd matrix) {
-	const static Eigen::IOFormat CSVFormat(Eigen::FullPrecision, 
-										Eigen::DontAlignCols, ", ", "\n");
-	std::ofstream file(file_name); // open a file to write
-    if (file.is_open())
-    {
-        file << matrix.format(CSVFormat);
-        file.close();
-    }
-}
-
-/** Load matrix from .csv file */
-Eigen::MatrixXd Utils::load_matrix(const std::string& file_name) {
-	std::ifstream file(file_name); // open a file to read
-	if (!file.good()) {
-		std::cerr << "File: " << file_name << " does not exist" << std::endl;
-		exit(1);
-	}
-	
-	// Read through file and extract all data elements
-	std::string row;
-	int i = 0; // row counter
-	std::string entry;
-	std::vector<double> entries;
-	while (std::getline(file, row)) {
-		std::stringstream row_stream(row);
-		while (std::getline(row_stream, entry, ',')) {
-			entries.push_back(std::stod(entry));
-		}
-		i++; // increment row counter
-	}
-
-	// Convert vector into matrix of proper shape
-	return Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(entries.data(), i, entries.size() / i);
-}
-
-/** Load vector from .csv file */
-Eigen::VectorXd Utils::load_vector(const std::string& file_name) {
-    Eigen::MatrixXd M = Utils::load_matrix(file_name);
-    return Eigen::Map<Eigen::VectorXd>(M.data(), M.rows());
-
-
-
-/**
-All of the rotation parameterizations here represent rotations
-of an initial fixed frame to a new frame. Therefore using these
-parameterizations to operate on a vector is the same as transforming
-the new frame coordinates into the original fixed frame.
-
-Examples if rotation describes relation of body w.r.t. inertial
-(how to rotate inertial to body):
-R: coverts body frame coordinates into inertial frame coordinates
-euler: usual roll-pitch-yaw of body frame w.r.t inertial frame
-*/
+#include <cmath>
 
 /** 
 	@brief Converts the rotation matrix R to the Euler angles (ZYX)
@@ -78,7 +29,7 @@ euler: usual roll-pitch-yaw of body frame w.r.t inertial frame
 	@param[in] R  rotation matrix
 	@param[in] e  euler angles e = (phi, theta, psi) = (roll, pitch, yaw)
 */
-void Utils::R_to_euler(const Eigen::Matrix3d R, Eigen::Vector3d& e) {
+void Rot::R_to_euler(const Eigen::Matrix3d R, Eigen::Vector3d& e) {
 	// Check for singularity that occurs when pitch = 90 deg
 	if (sqrt(R(0,0)*R(0,0) + R(1,0)*R(1,0)) >= 1e-6) {
 		e(0) = atan2(R(2,1), R(2,2));
@@ -99,7 +50,7 @@ void Utils::R_to_euler(const Eigen::Matrix3d R, Eigen::Vector3d& e) {
 	@param[in] e  euler angles e = (phi, theta, psi) = (roll, pitch, yaw)
 	@param[in] R  rotation matrix
 */
-void Utils::euler_to_R(const Eigen::Vector3d e, Eigen::Matrix3d& R) {
+void Rot::euler_to_R(const Eigen::Vector3d e, Eigen::Matrix3d& R) {
 	R(0,0) = cos(e(1))*cos(e(2));
 	R(0,1) = sin(e(0))*sin(e(1))*cos(e(2)) - cos(e(0))*sin(e(2));
 	R(0,2) = sin(e(0))*sin(e(2)) + cos(e(0))*sin(e(1))*cos(e(2));
@@ -117,7 +68,7 @@ void Utils::euler_to_R(const Eigen::Vector3d e, Eigen::Matrix3d& R) {
 	@param[in] q  unit quaternion q = (w, x, y, z) = w + (x i, y j, z k) 
 	@param[in] R  rotation matrix
 */
-void Utils::quat_to_R(const Eigen::Vector4d q, Eigen::Matrix3d& R) {
+void Rot::quat_to_R(const Eigen::Vector4d q, Eigen::Matrix3d& R) {
 	R(0,0) = 1.0 - 2.0*q(2)*q(2) - 2.0*q(3)*q(3);
 	R(0,1) = 2.0*q(1)*q(2) - 2.0*q(3)*q(0);
 	R(0,2) = 2.0*q(1)*q(3) + 2.0*q(2)*q(0);
@@ -137,7 +88,7 @@ void Utils::quat_to_R(const Eigen::Vector4d q, Eigen::Matrix3d& R) {
 	@param[in] e  euler angles e = (phi, theta, psi) = (roll, pitch, yaw)
 
 */
-void Utils::quat_to_euler(const Eigen::Vector4d q, Eigen::Vector3d& e) {
+void Rot::quat_to_euler(const Eigen::Vector4d q, Eigen::Vector3d& e) {
 	double R00 = 1.0 - 2.0*q(2)*q(2) - 2.0*q(3)*q(3);
     double R10 = 2.0*q(1)*q(2) + 2*q(3)*q(0);
     if (sqrt(R00*R00 + R10*R10 >= 1e-6)) {
@@ -148,7 +99,7 @@ void Utils::quat_to_euler(const Eigen::Vector4d q, Eigen::Vector3d& e) {
     else {
     	e(0) = atan2(-2.0*q(2)*q(3) - 2.0*q(1)*q(0), 1.0 - 2.0*q(1)*q(1) - 2.0*q(3)*q(3));
         e(1) = asin(-2.0*q(1)*q(3) + 2.0*q(2)*q(0));
-        e(2) = 0.0
+        e(2) = 0.0;
     }
 }
 
@@ -159,7 +110,7 @@ void Utils::quat_to_euler(const Eigen::Vector4d q, Eigen::Vector3d& e) {
 	@param[in] a   axis a = (x, y, z) 
 	@param[in] q   unit quaternion q = (w, x, y, z) = w + (x i, y j, z k) 
 */
-void Utils::axis_to_quat(const double th, const Eigen::Vector3d a, Eigen::Vector3d& q) {
+void Rot::axis_to_quat(const double th, Eigen::Vector3d a, Eigen::Vector4d& q) {
 	a.normalize();
 	q(0) = cos(th/2.0);
 	q(1) = a(0)*sin(th/2.0);
@@ -175,12 +126,20 @@ void Utils::axis_to_quat(const double th, const Eigen::Vector3d a, Eigen::Vector
 	@param[in] th  angle
 	@param[in] a   axis a = (x, y, z) 
 */
-void Utils::quat_to_axis(const Eigen::Vector3d q, double& th, Eigen::Vector3d& a) {
-    th = 2.0*acos(q(0));
-    double d = sqrt(1.0 - q(0)*q(0));
-    a(0) = q(1)/d;
-    a(1) = q(2)/d;
-    a(2) = q(3)/d;
+void Rot::quat_to_axis(const Eigen::Vector4d q, double& th, Eigen::Vector3d& a) {
+	if (q(0) > 0.999999) { // no rotation so you can arbitarily pick a
+		th = 0.0;
+		a(0) = 1.0;
+		a(1) = 0.0;
+		a(2) = 0.0;
+	}
+	else {
+		th = 2.0*acos(q(0));
+    	double d = sqrt(1.0 - q(0)*q(0));
+    	a(0) = q(1)/d;
+    	a(1) = q(2)/d;
+    	a(2) = q(3)/d;
+	}
 }
 
 /**
@@ -192,7 +151,7 @@ void Utils::quat_to_axis(const Eigen::Vector3d q, double& th, Eigen::Vector3d& a
 	@param[in] q   unit quaternion q = (qw, qx, qy, qz) = qw + (qx i, qy j, qz k) 
 	@param[in] o   composed unit quaternion o = (ow, ox, oy, oz) = ow + (ox i, oy j, oz k) 
 */
-void Utils::compose_quats(const Eigen::Vector3d p, const Eigen::Vector3d q, Eigen::Vector3d& o) {
+void Rot::compose_quats(const Eigen::Vector4d p, const Eigen::Vector4d q, Eigen::Vector4d& o) {
 	o(0) = p(0)*q(0) - (p(1)*q(1) + p(2)*q(2) + p(3)*q(3));
 	o(1) = p(0)*q(1) + p(1)*q(0) + p(2)*q(3) - p(3)*q(2);
 	o(2) = p(0)*q(2) - p(1)*q(3) + p(2)*q(0) + p(3)*q(1);
@@ -202,12 +161,10 @@ void Utils::compose_quats(const Eigen::Vector3d p, const Eigen::Vector3d q, Eige
 /**
 	@brief Inverts a unit quaternion, gives the opposite rotation
 
-	@param[in] p   unit quaternion p = (pw, px, py, pz) = pw + (px i, py j, pz k) 
-	@param[in] q   inverted unit quaternion q = (qw, qx, qy, qz) = qw + (qx i, qy j, qz k) 
+	@param[in] q   unit quaternion q = (qw, qx, qy, qz) = qw + (qx i, qy j, qz k) 
 */
-void Utils::invert_quat(const Eigen::Vector3d p, Eigen::Vector3d& q) {
-    q(0) = p(0);
-    q(1) = -p(1);
-    q(2) = -p(2);
-    q(3) = -p(3);
+void Rot::invert_quat(Eigen::Vector4d& q) {
+    q(1) *= -1.0;
+    q(2) *= -1.0;
+    q(3) *= -1.0;
 }

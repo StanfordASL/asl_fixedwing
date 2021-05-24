@@ -11,7 +11,7 @@
     <arg name="Y" default="0"/>
     <!-- vehicle model and world -->
     <arg name="est" default="ekf2"/>
-    <arg name="vehicle" default="fixedwing"/>
+    <arg name="vehicle" default="aslfixedwing"/>
     <arg name="world" default="$(find asl_fixedwing)/worlds/empty.world"/>
     <arg name="sdf" default="$(find asl_fixedwing)/models/gazebo/$(arg vehicle).sdf"/>
 

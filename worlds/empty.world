@@ -39,7 +39,7 @@
     <gui fullscreen='0'>
      <camera name="user_camera">
         <track_visual>
-          <name>fixedwing</name>
+          <name>aslfixedwing</name>
           <static>true</static>
           <use_model_frame>true</use_model_frame>
           <xyz>-2 0 0</xyz>

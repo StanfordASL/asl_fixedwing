@@ -31,35 +31,43 @@ def reducedOrderRiccati(A, B, C, H, Wz, Wu):
     return K, L
 
 if __name__ == '__main__':
-    if len(sys.argv) <= 1 or sys.argv[1] not in ['gazebo','skywalker']:
-        print('Correct usage: python controller.py {gazebo, skywalker}')
+    if len(sys.argv) <= 2 or sys.argv[1] not in ['gazebo','skywalker'] \
+            or sys.argv[2] not in ['slf', 'stf']:
+        print('Correct usage: python rompc_synth.py {gazebo, skywalker} {slf, stf}')
         sys.exit()
 
     # Generate save directory if it doesn't exist
-    path = dirname(abspath(__file__))
+    root = dirname(dirname(dirname(abspath(__file__))))
+    path = join(root, "src/rompc")
     savepath = join(path, sys.argv[1])
     if not isdir(savepath):
         mkdir(savepath)
 
     # Append path to load the models   
-    root = dirname(dirname(path))
     sys.path.append(join(root, "models/" + sys.argv[1]))
-    from model import linearized_aircraft_slf
+    from sysid import aircraft_ctrl_params
 
     if sys.argv[1] == 'gazebo':
-        S = 25
-        psi = 0.0
-        A, B, C, H, x_eq, u_eq = linearized_aircraft_slf(S, psi)
+        from model import linearized_aircraft_slf, linearized_aircraft_stf, simplify_control
+        S = 13 # m/s
+        if sys.argv[2] == 'slf':
+            A, B, C, H, x_eq, u_eq = linearized_aircraft_slf(S)
+        elif sys.argv[2] == 'stf':
+            R = 50 # m
+            A, B, C, H, x_eq, u_eq = linearized_aircraft_stf(S, R)
+        
+        # Simplify controls to be aircraft body rates
+        A, B, C, H, x_eq, u_eq = simplify_control(A, B, x_eq, u_eq)
 
     elif sys.argv[1] == 'skywalker':
         print('Skywalker model not implemented')
         sys.exit()
 
     # Compute controller gains
-    # z = [p, q, r, ex, ey, ez]
-    # u = [T, al, ar, e, r]
-    Wz = np.diag([1, 1, 1, 1, 1, 1])
-    Wu = np.diag([0.5, 1, 1, 1, 1])
+    # z = [u, v, w, p, q, r, phi, th, psi, ex, ey, ez] or [u, v, w, phi, th, psi, ex, ey, ez]
+    # u = [T, a, e, r] or [T, p, q, r]
+    Wz = np.diag([1, 1, 1, 1, 1, 1, 1, 1, 1])
+    Wu = np.diag([0.5, 1, 1, 1])
     K, L = reducedOrderRiccati(A, B, C, H, Wz, Wu)
 
     # Save files to be loaded by ROMPC controller
@@ -71,3 +79,7 @@ if __name__ == '__main__':
     np.savetxt(join(savepath, "L.csv"), L, delimiter=",")
     np.savetxt(join(savepath, "x_eq.csv"), x_eq, delimiter=",")
     np.savetxt(join(savepath, "u_eq.csv"), u_eq, delimiter=",")
+
+    # Get additional aircraft parameters
+    p = aircraft_ctrl_params()
+    np.savetxt(join(savepath, "ctrl_params.csv"), p, delimiter=",");
