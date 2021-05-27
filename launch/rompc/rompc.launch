@@ -5,5 +5,6 @@
 		<param name="CTRL_RATE" value="200.0" />
         <param name="CTRL_PATH" value="$(find asl_fixedwing)/src/rompc/" />
         <param name="MODEL" value="gazebo" />
+        <param name="CTRL_TYPE" value="body_rate" />
 	</node>
 </launch>

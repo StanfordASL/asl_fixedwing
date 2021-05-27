@@ -168,3 +168,11 @@ void Rot::invert_quat(Eigen::Vector4d& q) {
     q(2) *= -1.0;
     q(3) *= -1.0;
 }
+
+double Rot::rad_to_deg(double th) {
+    return th*(180.0/M_PI);
+}
+
+double Rot::deg_to_rad(double th) {
+    return th*(M_PI/180.0);
+}

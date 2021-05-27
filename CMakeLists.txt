@@ -160,12 +160,14 @@ add_executable(position src/examples/position.cpp)
 target_link_libraries(position ${catkin_LIBRARIES})
 
 
-add_executable(rompc_node src/rompc/rompc_node.cpp
+add_executable(rompc_node scripts/rompc/rompc_node.cpp
 	src/utils/data.cpp
-	src/rompc/rompc.cpp)
+	src/rompc/rompc.cpp
+    src/utils/plane.cpp
+    src/utils/rotation.cpp)
 target_link_libraries(rompc_node ${catkin_LIBRARIES})
 
-add_executable(sysid_actuator_ctrl src/sysid/sysid_actuator_ctrl.cpp
+add_executable(sysid_actuator_ctrl scripts/sysid/sysid_actuator_ctrl.cpp
 	src/utils/rotation.cpp)
 target_link_libraries(sysid_actuator_ctrl ${catkin_LIBRARIES})
 #############
