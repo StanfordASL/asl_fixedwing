@@ -12,8 +12,6 @@
 
 #include <ros/ros.h>
 #include <ros/console.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <geometry_msgs/TwistStamped.h>
 #include <mavros_msgs/State.h>
 #include <mavros_msgs/ActuatorControl.h>
 #include <mavros_msgs/AttitudeTarget.h>
@@ -69,7 +67,7 @@ int main(int argc, char **argv) {
     ROS_INFO("Loading controller parameters from %s", filepath.c_str());
 
     // Define Plane object
-    Plane plane(nh, CTRL_TYPE, filepath);
+    Plane plane(nh, CTRL_TYPE, filepath, true);
 
 
 	// Define publishers
@@ -77,11 +75,6 @@ int main(int argc, char **argv) {
 				("mavros/setpoint_raw/attitude", 10);
 	ros::Publisher act_cmd_pub = nh.advertise<mavros_msgs::ActuatorControl>
 				("mavros/actuator_control", 10);
-    ros::Publisher pos_pub = nh.advertise<geometry_msgs::Point>
-                ("plane/position", 10);
-    //ros::Publisher euler_pub = nh.advertise<geometry_msgs::Point>
-    //            ("plane/euler", 10);
-
 
 
 	// Initialize controller
@@ -108,10 +101,6 @@ int main(int argc, char **argv) {
 	Eigen::VectorXd u_nrmlzd;
 	
     // Temporary publishing messages
-    geometry_msgs::Point plane_pos;
-    geometry_msgs::Point plane_euler;
-    Eigen::Vector3d p;
-    Eigen::Vector3d euler;
 	while(ros::ok()) {
 		// Each call to spinOnce will result in subscriber callbacks
 		ros::spinOnce();
@@ -120,17 +109,6 @@ int main(int argc, char **argv) {
 		dt = ros::Time::now().toSec() - t;
 		t = ros::Time::now().toSec();
 
-        // Temporary stuff
-        p = plane.get_pos();
-        plane_pos.x = p(0);
-        plane_pos.y = p(1);
-        plane_pos.z = p(2);
-        pos_pub.publish(plane_pos);
-        euler = plane.get_euler();
-        plane_euler.x = Rot::rad_to_deg(euler(0));
-        plane_euler.y = Rot::rad_to_deg(euler(1));
-        plane_euler.z = Rot::rad_to_deg(euler(2));
-        //euler_pub.publish(plane_euler);
 		// Run diagnostics to ensure ROMPC still good
 		// TODO
 

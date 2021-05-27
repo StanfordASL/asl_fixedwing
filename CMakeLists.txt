@@ -164,7 +164,8 @@ add_executable(rompc_node scripts/rompc/rompc_node.cpp
 	src/utils/data.cpp
 	src/rompc/rompc.cpp
     src/utils/plane.cpp
-    src/utils/rotation.cpp)
+    src/utils/rotation.cpp
+    src/utils/utils.cpp)
 target_link_libraries(rompc_node ${catkin_LIBRARIES})
 
 add_executable(sysid_actuator_ctrl scripts/sysid/sysid_actuator_ctrl.cpp

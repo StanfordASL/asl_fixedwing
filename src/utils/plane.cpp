@@ -8,6 +8,7 @@
 #include <utils/plane.hpp>
 #include <utils/data.hpp>
 #include <utils/rotation.hpp>
+#include <utils/utils.hpp>
 
 /** 
 	@brief Constructor which loads parameters from csv file.
@@ -19,8 +20,8 @@
                            c_a, e_0, c_e, r_0, c_r]
 
 */
-Plane::Plane(ros::NodeHandle& nh, const unsigned ctrl_type, const std::string& filepath)
-                    : _ctrl_type(ctrl_type) {
+Plane::Plane(ros::NodeHandle& nh, const unsigned ctrl_type, const std::string& filepath, bool debug)
+                    : _ctrl_type(ctrl_type), _debug(debug) {
     // Check ctrl_type is valid
     if (_ctrl_type != BODY_RATE and _ctrl_type != CTRL_SURF) {
         throw "Control type must be either BODY_RATE or CTRL_SURF";
@@ -40,9 +41,11 @@ Plane::Plane(ros::NodeHandle& nh, const unsigned ctrl_type, const std::string& f
     }
 
     // Initialize variables
-    _p_b_in_i.setZero();
-    _q_i_to_b.setZero();
+    _p_b_i_I.setZero();
+    _v_b_I_B.setZero();
+    _q_I_to_B.setZero();
     _euler.setZero();
+    _om_B_I_B.setZero();
     
     // Define MAVROS subscribers
     _state_sub = nh.subscribe<mavros_msgs::State>
@@ -50,9 +53,18 @@ Plane::Plane(ros::NodeHandle& nh, const unsigned ctrl_type, const std::string& f
     _pose_sub = nh.subscribe<geometry_msgs::PoseStamped>
                 ("mavros/local_position/pose", 10, &Plane::pose_cb, this);
     _twist_sub = nh.subscribe<geometry_msgs::TwistStamped>
-                ("mavros/local_position/velocity", 10, &Plane::twist_cb, this);
-    _euler_pub = nh.advertise<geometry_msgs::Point>
-                ("plane/euler", 10);
+                ("mavros/local_position/velocity_body", 10, &Plane::twist_cb, this);
+    
+    if (_debug) {
+        _pos_pub = nh.advertise<geometry_msgs::Point>
+                    ("plane/position", 10);
+        _vel_pub = nh.advertise<geometry_msgs::Point>
+                    ("plane/velocity", 10);
+        _euler_pub = nh.advertise<geometry_msgs::Point>
+                    ("plane/euler", 10);
+        _bodyrate_pub = nh.advertise<geometry_msgs::Point>
+                    ("plane/bodyrate", 10);
+    }
 }
 
 /**
@@ -115,43 +127,65 @@ double Plane::nrmlz_thrust_cmd(const double T, const double V) {
     @param[in] msg  message from /mavros/local_position/pose
 */
 void Plane::pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg) {
-    Eigen::Vector3d p_b_in_i_ENU;
-    p_b_in_i_ENU(0) = msg->pose.position.x;
-    p_b_in_i_ENU(1) = msg->pose.position.y;
-    p_b_in_i_ENU(2) = msg->pose.position.z;
-
-    // Since the position is written w.r.t ENU frame, do a rotation
-    // to map to NED frame.
-    _p_b_in_i = _R_ENU_TO_NED * p_b_in_i_ENU;
+    _p_b_i_I(0) = msg->pose.position.y;
+    _p_b_i_I(1) = msg->pose.position.x;
+    _p_b_i_I(2) = -msg->pose.position.z;
 
     // Transform the quaternion from ENU to ENU to NED to FRD
-    Eigen::Vector4d q_enu_to_flu;
-    Eigen::Vector4d q_ned_to_flu;
-    q_enu_to_flu(0) = msg->pose.orientation.w;
-    q_enu_to_flu(1) = msg->pose.orientation.x;
-    q_enu_to_flu(2) = msg->pose.orientation.y;
-    q_enu_to_flu(3) = msg->pose.orientation.z;
-    Rot::compose_quats(_Q_NED_TO_ENU, q_enu_to_flu, q_ned_to_flu);
-    Rot::compose_quats(q_ned_to_flu, _Q_FLU_TO_FRD, _q_i_to_b);
+    Eigen::Vector4d q_ENU_to_FLU;
+    Eigen::Vector4d q_NED_to_FLU;
+    Utils::quat_to_eigen4d(msg->pose.orientation, q_ENU_to_FLU);
+    Rot::compose_quats(_Q_NED_TO_ENU, q_ENU_to_FLU, q_NED_to_FLU);
+    Rot::compose_quats(q_NED_to_FLU, _Q_FLU_TO_FRD, _q_I_to_B);
 
     // Compute Euler angles from quaternion
-    Rot::quat_to_euler(_q_i_to_b, _euler);
+    Rot::quat_to_euler(_q_I_to_B, _euler);
 
-    geometry_msgs::Point e;
-    e.x = _euler(0);
-    e.y = _euler(1);
-    e.z = _euler(2);
-    _euler_pub.publish(e);
+    if (_debug) {
+        // Publish position
+        geometry_msgs::Point pos;
+        Utils::eigen3d_to_point(_p_b_i_I, pos);
+        _pos_pub.publish(pos);
+
+        // Publish euler angles
+        geometry_msgs::Point euler;
+        euler.x = Rot::rad_to_deg(_euler(0)); 
+        euler.y = Rot::rad_to_deg(_euler(1)); 
+        euler.z = Rot::rad_to_deg(_euler(2));
+        _euler_pub.publish(euler);
+    }
 }
 
 /**
     @brief Callback for extracting information from MAVROS
-    local_position/velocity messages. These messages provide
+    local_position/velocity messages. These messages provide velocity
+    of body w.r.t inertial ENU frame and body angular velocity in ENU.
 
     @param[in] msg  message from /mavros/local_position/velocity
 */
 void Plane::twist_cb(const geometry_msgs::TwistStamped::ConstPtr& msg) {
+    Eigen::Vector3d v_b_I_I;
+    _v_b_I_B(0) = msg->twist.linear.x;
+    _v_b_I_B(1) = -msg->twist.linear.y;
+    _v_b_I_B(2) = -msg->twist.linear.z;
 
+    _om_B_I_B(0) = msg->twist.angular.x;
+    _om_B_I_B(1) = -msg->twist.angular.y;
+    _om_B_I_B(2) = -msg->twist.angular.z;
+
+    if (_debug) {
+        // Publish velocity
+        geometry_msgs::Point vel;
+        Utils::eigen3d_to_point(_v_b_I_B, vel);
+        _vel_pub.publish(vel);
+
+        // Publish body rates
+        geometry_msgs::Point om;
+        om.x = Rot::rad_to_deg(_om_B_I_B(0));
+        om.y = Rot::rad_to_deg(_om_B_I_B(1));
+        om.z = Rot::rad_to_deg(_om_B_I_B(2));
+        _bodyrate_pub.publish(om);
+    }
 }
 
 /**
@@ -166,19 +200,34 @@ void Plane::state_cb(const mavros_msgs::State::ConstPtr& msg) {
 }
 
 /**
-    @brief Returns aircraft position in local inertial NED frame coordinates.
+    @brief Returns aircraft position in meters in local inertial NED frame coordinates.
 */
 Eigen::Vector3d Plane::get_pos() {
-    return _p_b_in_i;
+    return _p_b_i_I;
 }
 
 /**
-    @brief Returns aircraft euler angles (roll, pitch, yaw) with respect
+    @brief Returns aircraft euler angles (roll, pitch, yaw) in rad with respect
     to local inertial NED frame.
 */
 Eigen::Vector3d Plane::get_euler() {
     return _euler;
 }
+
+/**
+    @brief Returns aircraft velocity in m/s w.r.t local inertial frame in body frame coordinates.
+*/
+Eigen::Vector3d Plane::get_vel() {
+    return _v_b_I_B;
+}
+
+/**
+    @brief Returns aircraft body rates (p, q, r) in rad/s.
+*/
+Eigen::Vector3d Plane::get_bodyrate() {
+    return _om_B_I_B;
+}
+
 
 /**
     @brief Returns true if PX4 is connected
