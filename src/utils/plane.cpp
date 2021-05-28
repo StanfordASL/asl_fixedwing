@@ -62,7 +62,7 @@ Plane::Plane(ros::NodeHandle& nh, const unsigned ctrl_type,
                 ("mavros/actuator_control", 1);
         ROS_INFO("Control type set to CTRL_SURF");
     }
-    else {
+    else if (_ctrl_type == BODY_RATE) {
         _ctrl_pub = nh.advertise<mavros_msgs::AttitudeTarget>
                 ("mavros/setpoint_raw/attitude", 1);
         ROS_INFO("Control type set to BODY_RATE");
@@ -101,12 +101,14 @@ void Plane::send_control(const Vec4& u) {
         cmd.controls[3] = u_nrmlzd(0);
         _ctrl_pub.publish(cmd);
     }
-    else {
+    else if (_ctrl_type == BODY_RATE) {
         mavros_msgs::AttitudeTarget cmd;
         cmd.type_mask = mavros_msgs::AttitudeTarget::IGNORE_ATTITUDE;
+
+        // Convert desired body rates back into FLU from FRD
         cmd.body_rate.x = u_nrmlzd(1);
-        cmd.body_rate.y = u_nrmlzd(2);
-        cmd.body_rate.z = u_nrmlzd(3);
+        cmd.body_rate.y = -u_nrmlzd(2);
+        cmd.body_rate.z = -u_nrmlzd(3);
         cmd.thrust = u_nrmlzd(0);
         _ctrl_pub.publish(cmd);
     }
