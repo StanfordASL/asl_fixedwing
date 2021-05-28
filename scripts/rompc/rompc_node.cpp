@@ -12,9 +12,6 @@
 
 #include <ros/ros.h>
 #include <ros/console.h>
-#include <mavros_msgs/State.h>
-#include <mavros_msgs/ActuatorControl.h>
-#include <mavros_msgs/AttitudeTarget.h>
 #include <string>
 #include <iostream>
 #include <Eigen/Dense>
@@ -48,11 +45,9 @@ int main(int argc, char **argv) {
     unsigned CTRL_TYPE;
     if (ctrl_type.compare("body_rate") == 0) {
         CTRL_TYPE = Plane::BODY_RATE;
-        ROS_INFO("Control type set to BODY_RATE");
     }
     else if (ctrl_type.compare("ctrl_surf") == 0) {
         CTRL_TYPE = Plane::CTRL_SURF;
-        ROS_INFO("Control type set to CTRL_SURF");
     }
     else {
         ROS_INFO("CTRL_TYPE must be body_rate or ctrl_surf, got %s", ctrl_type.c_str());
@@ -67,14 +62,7 @@ int main(int argc, char **argv) {
     ROS_INFO("Loading controller parameters from %s", filepath.c_str());
 
     // Define Plane object
-    Plane plane(nh, CTRL_TYPE, filepath, true);
-
-
-	// Define publishers
-	ros::Publisher att_cmd_pub = nh.advertise<mavros_msgs::AttitudeTarget>
-				("mavros/setpoint_raw/attitude", 10);
-	ros::Publisher act_cmd_pub = nh.advertise<mavros_msgs::ActuatorControl>
-				("mavros/actuator_control", 10);
+    Plane plane(nh, CTRL_TYPE, filepath);
 
 
 	// Initialize controller
@@ -84,21 +72,19 @@ int main(int argc, char **argv) {
 	// Define rate for the node
 	ros::Rate rate(CTRL_RATE);
 
-	mavros_msgs::ActuatorControl act_cmd;
-	act_cmd.group_mix = mavros_msgs::ActuatorControl::PX4_MIX_FLIGHT_CONTROL;
 
 	// Wait for FCU connection
 	while(ros::ok() && !plane.px4_connected()) {
 		ros::spinOnce();
 		rate.sleep();
 	}
+    ROS_INFO("PX4 connection established");
 
 	// Main loop, until ROS shutdown
 	double t0 = ros::Time::now().toSec();
 	double t = t0;
 	double t_last_reset = t0;
 	double dt;
-	Eigen::VectorXd u_nrmlzd;
 	
     // Temporary publishing messages
 	while(ros::ok()) {
@@ -114,19 +100,19 @@ int main(int argc, char **argv) {
 
 		// Get control
 		//ctrl.update(y);
+	
+
+        // Send control
+        //plane.send_control(ctrl.get_u());
 		
-		// Convert control into normalized units
-		//u_nrmlzd = Plane::normalize_control(ctrl.get_u());
-		
-		//if (px4_mode != "OFFBOARD" && t - t_last_reset > T_RESET) {
+		if (plane.px4_mode() != "OFFBOARD" && t - t_last_reset > T_RESET) {
 			//ctrl.init(x0);
-			//ROS_INFO("Reinitializing ROMPC controller");
-			//t_last_reset = t;
-		//}
+			ROS_INFO("Reinitializing ROMPC controller");
+			t_last_reset = t;
+		}
 
 		// Add a check on ROMPC controller failure and
 		// have backup be a loiter or something using a change mode
-		act_cmd_pub.publish(act_cmd);
 		rate.sleep(); // sleep for remaining time
 	}
 }

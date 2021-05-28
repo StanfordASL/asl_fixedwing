@@ -20,8 +20,9 @@
                            c_a, e_0, c_e, r_0, c_r]
 
 */
-Plane::Plane(ros::NodeHandle& nh, const unsigned ctrl_type, const std::string& filepath, bool debug)
-                    : _ctrl_type(ctrl_type), _debug(debug) {
+Plane::Plane(ros::NodeHandle& nh, const unsigned ctrl_type, 
+             const std::string& filepath, bool debug)
+             : _ctrl_type(ctrl_type), _debug(debug) {
     // Check ctrl_type is valid
     if (_ctrl_type != BODY_RATE and _ctrl_type != CTRL_SURF) {
         throw "Control type must be either BODY_RATE or CTRL_SURF";
@@ -49,12 +50,24 @@ Plane::Plane(ros::NodeHandle& nh, const unsigned ctrl_type, const std::string& f
     
     // Define MAVROS subscribers
     _state_sub = nh.subscribe<mavros_msgs::State>
-                ("mavros/state", 10, &Plane::state_cb, this);
+                ("mavros/state", 1, &Plane::state_cb, this);
     _pose_sub = nh.subscribe<geometry_msgs::PoseStamped>
-                ("mavros/local_position/pose", 10, &Plane::pose_cb, this);
+                ("mavros/local_position/pose", 1, &Plane::pose_cb, this);
     _twist_sub = nh.subscribe<geometry_msgs::TwistStamped>
-                ("mavros/local_position/velocity_body", 10, &Plane::twist_cb, this);
+                ("mavros/local_position/velocity_body", 1, &Plane::twist_cb, this);
     
+    // Define MAVROS publisher
+    if (_ctrl_type == CTRL_SURF) {
+        _ctrl_pub = nh.advertise<mavros_msgs::ActuatorControl>
+                ("mavros/actuator_control", 1);
+        ROS_INFO("Control type set to CTRL_SURF");
+    }
+    else {
+        _ctrl_pub = nh.advertise<mavros_msgs::AttitudeTarget>
+                ("mavros/setpoint_raw/attitude", 1);
+        ROS_INFO("Control type set to BODY_RATE");
+    }
+
     if (_debug) {
         _pos_pub = nh.advertise<geometry_msgs::Point>
                     ("plane/position", 10);
@@ -68,6 +81,38 @@ Plane::Plane(ros::NodeHandle& nh, const unsigned ctrl_type, const std::string& f
 }
 
 /**
+    @brief Sends control u to PX4 using MAVROS. The control u is defined:
+    
+    u = [T, a, e, r] in [N, rad, rad, rad] if _ctrl_type = CTRL_SURF  
+    u = [T, p, q, r] in [N, rad/s, rad/s, rad/s] if _ctrl_type = BODY_RATE
+    
+    @param[in] u   dimensional control vector
+*/
+void Plane::send_control(const Vec4& u) {
+    Vec4 u_nrmlzd;
+    Plane::normalize_control(u, u_nrmlzd, _v_b_I_B(0));
+
+    if (_ctrl_type == CTRL_SURF) {
+        mavros_msgs::ActuatorControl cmd;
+        cmd.group_mix = mavros_msgs::ActuatorControl::PX4_MIX_FLIGHT_CONTROL;
+        cmd.controls[0] = u_nrmlzd(1);
+        cmd.controls[1] = u_nrmlzd(2);
+        cmd.controls[2] = u_nrmlzd(3);
+        cmd.controls[3] = u_nrmlzd(0);
+        _ctrl_pub.publish(cmd);
+    }
+    else {
+        mavros_msgs::AttitudeTarget cmd;
+        cmd.type_mask = mavros_msgs::AttitudeTarget::IGNORE_ATTITUDE;
+        cmd.body_rate.x = u_nrmlzd(1);
+        cmd.body_rate.y = u_nrmlzd(2);
+        cmd.body_rate.z = u_nrmlzd(3);
+        cmd.thrust = u_nrmlzd(0);
+        _ctrl_pub.publish(cmd);
+    }
+}
+
+/**
 	@brief Converts the full control u = [T, a, e, r] or u = [T, p, q, r] 
     given in unit [N, rad, rad, rad] or [N, rad/s, rad/s, rad/s] to 
     normalized quantities that are commanded through MAVROS.
@@ -76,7 +121,7 @@ Plane::Plane(ros::NodeHandle& nh, const unsigned ctrl_type, const std::string& f
 	@param[in] u_nrmlzd  normalized commands
 	@param[in] V         rel. airspeed parallel to body x axis [m/s]
 */
-void Plane::normalize_control(const uvec& u, uvec& u_nrmlzd, const double V) {
+void Plane::normalize_control(const Vec4& u, Vec4& u_nrmlzd, const double V) {
     u_nrmlzd(0) = Plane::nrmlz_thrust_cmd(u(0), V);
     if (_ctrl_type == CTRL_SURF) { 
 	    u_nrmlzd(1) = Plane::nrmlz_ctrl_srf_cmd(u(1), 0);
@@ -132,8 +177,8 @@ void Plane::pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg) {
     _p_b_i_I(2) = -msg->pose.position.z;
 
     // Transform the quaternion from ENU to ENU to NED to FRD
-    Eigen::Vector4d q_ENU_to_FLU;
-    Eigen::Vector4d q_NED_to_FLU;
+    Vec4 q_ENU_to_FLU;
+    Vec4 q_NED_to_FLU;
     Utils::quat_to_eigen4d(msg->pose.orientation, q_ENU_to_FLU);
     Rot::compose_quats(_Q_NED_TO_ENU, q_ENU_to_FLU, q_NED_to_FLU);
     Rot::compose_quats(q_NED_to_FLU, _Q_FLU_TO_FRD, _q_I_to_B);
@@ -159,12 +204,12 @@ void Plane::pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg) {
 /**
     @brief Callback for extracting information from MAVROS
     local_position/velocity messages. These messages provide velocity
-    of body w.r.t inertial ENU frame and body angular velocity in ENU.
+    of body w.r.t inertial in body FLU frame and body angular velocity in FLU.
 
-    @param[in] msg  message from /mavros/local_position/velocity
+    @param[in] msg  message from /mavros/local_position/velocity_body
 */
 void Plane::twist_cb(const geometry_msgs::TwistStamped::ConstPtr& msg) {
-    Eigen::Vector3d v_b_I_I;
+    // Convert both from FLU to FRD
     _v_b_I_B(0) = msg->twist.linear.x;
     _v_b_I_B(1) = -msg->twist.linear.y;
     _v_b_I_B(2) = -msg->twist.linear.z;
@@ -202,7 +247,7 @@ void Plane::state_cb(const mavros_msgs::State::ConstPtr& msg) {
 /**
     @brief Returns aircraft position in meters in local inertial NED frame coordinates.
 */
-Eigen::Vector3d Plane::get_pos() {
+Vec3 Plane::get_pos() {
     return _p_b_i_I;
 }
 
@@ -210,21 +255,21 @@ Eigen::Vector3d Plane::get_pos() {
     @brief Returns aircraft euler angles (roll, pitch, yaw) in rad with respect
     to local inertial NED frame.
 */
-Eigen::Vector3d Plane::get_euler() {
+Vec3 Plane::get_euler() {
     return _euler;
 }
 
 /**
     @brief Returns aircraft velocity in m/s w.r.t local inertial frame in body frame coordinates.
 */
-Eigen::Vector3d Plane::get_vel() {
+Vec3 Plane::get_vel() {
     return _v_b_I_B;
 }
 
 /**
     @brief Returns aircraft body rates (p, q, r) in rad/s.
 */
-Eigen::Vector3d Plane::get_bodyrate() {
+Vec3 Plane::get_bodyrate() {
     return _om_B_I_B;
 }
 
@@ -241,5 +286,12 @@ bool Plane::px4_connected() {
 */
 bool Plane::px4_armed() {
     return _px4_armed;
+}
+
+/**
+    @brief Returns PX4 mode string, i.e. OFFBOARD
+*/
+std::string Plane::px4_mode() {
+    return _px4_mode;
 }
 

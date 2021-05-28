@@ -14,23 +14,29 @@
 #include <vector>
 #include <cmath>
 #include <ros/ros.h>
+#include <ros/console.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TwistStamped.h>
 #include <mavros_msgs/State.h>
+#include <mavros_msgs/ActuatorControl.h>
+#include <mavros_msgs/AttitudeTarget.h>
 
-using uvec = Eigen::Vector4d;
+using Vec4 = Eigen::Vector4d;
+using Vec3 = Eigen::Vector3d;
 
 class Plane {
 private:
+    // Control input helpers
     double nrmlz_ctrl_srf_cmd(const double delta, const int i);
     double nrmlz_thrust_cmd(const double T, const double V);
+    void normalize_control(const Vec4& u, Vec4& u_nrmlzd, const double V);
 
 	// Use debug to publish some internal ROS topics
     bool _debug;
     
     // Parameters for scaling control surface deflection commands
-	Eigen::Vector3d _delta_0; // in order of [a, e, r]
-	Eigen::Vector3d _c_delta; // in order of [a, e, r]
+	Vec3 _delta_0; // in order of [a, e, r]
+	Vec3 _c_delta; // in order of [a, e, r]
 
     // Parameters for thrust command normalization
 	double _c_T0;
@@ -47,15 +53,16 @@ private:
     ros::Publisher _vel_pub;
     ros::Publisher _euler_pub;
     ros::Publisher _bodyrate_pub;
+    ros::Publisher _ctrl_pub;
 
     // Aircraft state information
-    Eigen::Vector3d _p_b_i_I; // body pos relative to inertial in I coord.
-    Eigen::Vector3d _v_b_I_B; // body vel as seen by I in B coord.
-    Eigen::Vector4d _q_I_to_B; // quaternion describing rotation from inertial NED to body FRD frame
-    Eigen::Vector3d _euler; // euler angles (roll, pitch, yaw) (phi, theta, psi)
-    Eigen::Vector3d _om_B_I_B; // body rates (p, q, r), angular velocity of B w.r.t I frame, in B coordinates
-    const Eigen::Vector4d _Q_NED_TO_ENU = (Eigen::Vector4d() << 0.0, -0.5*sqrt(2.0), -0.5*sqrt(2.0), 0.0).finished();
-    const Eigen::Vector4d _Q_FLU_TO_FRD = (Eigen::Vector4d() << 0.0, 1.0, 0.0, 0.0).finished();
+    Vec3 _p_b_i_I; // body pos relative to inertial in I coord.
+    Vec3 _v_b_I_B; // body vel as seen by I in B coord.
+    Vec4 _q_I_to_B; // quat rotation from inertial NED to body FRD frame
+    Vec3 _euler; // euler angles (roll, pitch, yaw) (phi, theta, psi)
+    Vec3 _om_B_I_B; // ang vel (p, q, r) of B w.r.t I frame, in B coordinates
+    const Vec4 _Q_NED_TO_ENU = (Vec4() << 0.0, -0.5*sqrt(2.0), -0.5*sqrt(2.0), 0.0).finished();
+    const Vec4 _Q_FLU_TO_FRD = (Vec4() << 0.0, 1.0, 0.0, 0.0).finished();
     
     // PX4 state information
     bool _px4_connected = false; // PX4 connection exists
@@ -64,8 +71,12 @@ private:
 
 
 public:
-    Plane(ros::NodeHandle& nh, const unsigned ctrl_type, const std::string& filepath, bool debug = false);
-    void normalize_control(const uvec& u, uvec& u_nrmlzd, const double V);
+    // Constructor
+    Plane(ros::NodeHandle& nh, const unsigned ctrl_type, 
+          const std::string& filepath, bool debug = false);
+    
+    // Send control commands
+    void send_control(const Vec4& u);
     
     // MAVROS related functions
     void pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
@@ -73,12 +84,13 @@ public:
     void state_cb(const mavros_msgs::State::ConstPtr& msg);
     
     // Accessing useful information
-    Eigen::Vector3d get_pos();
-    Eigen::Vector3d get_euler();
-    Eigen::Vector3d get_vel();
-    Eigen::Vector3d get_bodyrate();
+    Vec3 get_pos();
+    Vec3 get_euler();
+    Vec3 get_vel();
+    Vec3 get_bodyrate();
     bool px4_connected();
     bool px4_armed();
+    std::string px4_mode();
 
     // Control modes
     static const unsigned BODY_RATE = 0;
