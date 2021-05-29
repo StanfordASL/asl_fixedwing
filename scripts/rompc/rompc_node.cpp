@@ -8,13 +8,11 @@
 #include <rompc/rompc.hpp>
 #include <rompc/rompc_utils.hpp>
 #include <utils/plane.hpp>
-#include <utils/rotation.hpp>
 
 #include <ros/ros.h>
 #include <ros/console.h>
 #include <string>
 #include <iostream>
-#include <Eigen/Dense>
 
 int main(int argc, char **argv) {
 	ros::init(argc, argv, "rompc_node");
@@ -62,7 +60,7 @@ int main(int argc, char **argv) {
     ROS_INFO("Loading controller parameters from %s", filepath.c_str());
 
     // Define Plane object
-    Plane plane(nh, CTRL_TYPE, filepath);
+    Plane plane(nh, CTRL_TYPE, filepath, true);
 
 
 	// Initialize controller

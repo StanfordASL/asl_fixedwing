@@ -117,9 +117,9 @@ def aircraft(x, u):
         x[4]*cos(x[6]) - x[5]*sin(x[7])
 		)
 
-def slf_equilibrium(S):
+def sgf_equilibrium(S, gamma):
     """ Compute an equilibrium state and control for the aircraft
-    to fly with speed S in steady-level flight with constant altitude.
+    to fly with speed S in steady-glidelsope flight.
     Additionally, respecting control constraints and trying
     to minimize the control surface deflections. """
 
@@ -136,7 +136,7 @@ def slf_equilibrium(S):
     const = vertcat(aircraft(x, u)[0:6],              # equilibrium
                     norm_2(uvw) - S,                  # specified velocity
                     uvw[1],                           # no sideways motion
-                    uvw[2]*cos(th) - uvw[0]*sin(th))  # constant altitude
+                    uvw[2]*cos(th) - uvw[0]*sin(th) + S*sin(gamma)) # glideslope
 
     # Bounds on the decision variables u, v, w, th, u[0:4]
     lb = [-inf, -inf, -inf, -inf, 0, -D_MAX, -D_MAX, -D_MAX]
@@ -262,9 +262,9 @@ def stf_equilibrium(S, R):
     print('psi_dot_0 = {:.2f} deg/s'.format(np.rad2deg(S/R)))
     return xsol, usol
 
-def aircraft_slf(x0, u0):
+def aircraft_sgf(x0, u0):
     """ Aircraft dynamics with additional yaw and navigation equations
-    to include error from a steady level flight corresponding
+    to include error from a steady glideslope flight corresponding
     to the equilibrium (x0, u0). Returns a
     casadi function. New state for this model is
     x = [u, v, w, p, q, r, phi, th, dpsi, x_r, y_r, z_r]
@@ -346,13 +346,14 @@ def aircraft_stf(x0, u0):
 
     return Function('f', [x, u], [vertcat(aircraft(x, u), yaw, nav)], ['x', 'u'], ['xd'])
 
-def linearized_aircraft_slf(S):
+def linearized_aircraft_sgf(S, gamma):
     """
-    Given speed S [m/s], compute a linearized model
+    Given speed S [m/s], and glideslope angle gamma [rad] (negative
+    glideslope angle has velocity below horizoin), compute a linearized model
 
     dx_dot = A dx + B du
 
-    where dx and du are perturbations from a steady level flight
+    where dx and du are perturbations from a steady glideslope flight
     equilibrium condition with:
 
     x = [u, v, w, p, q, r, phi, th, dpsi, x_r, y_r, z_r]
@@ -362,13 +363,13 @@ def linearized_aircraft_slf(S):
     """
 
     # Compute equilibrium and round solutions
-    x0, u0 = slf_equilibrium(S)
+    x0, u0 = sgf_equilibrium(S, gamma)
     x0 = x0.round(8)
     u0 = u0.round(8)
 
     # Add navigation equations and build model function
     x0 = np.hstack((x0, np.zeros(3)))
-    f = aircraft_slf(x0, u0)
+    f = aircraft_sgf(x0, u0)
 
     # Compute Jacobians
     J = np.array(f.jacobian()(x0, u0, np.zeros(12)))
@@ -446,12 +447,13 @@ def simplify_control(A, B, x0, u0):
 
 if __name__ == "__main__":
     # Compute an equilibrium
-    #S = 13. # m/s
-    #A, B, C, H, x0, u0 = linearized_aircraft_slf(S)
-    
     S = 13. # m/s
-    R = 50 # m
-    A, B, C, H, x0, u0 = linearized_aircraft_stf(S, R)
+    gamma = np.deg2rad(-3.5)
+    A, B, C, H, x0, u0 = linearized_aircraft_sgf(S, gamma)
+    
+    #S = 13. # m/s
+    #R = 50 # m
+    #A, B, C, H, x0, u0 = linearized_aircraft_stf(S, R)
 
     # Simplify the model to have body rate control
     A, B, C, H, x0, u0 = simplify_control(A, B, x0, u0)

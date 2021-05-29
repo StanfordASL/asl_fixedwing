@@ -63,7 +63,6 @@ def quat_to_euler(q):
 
     into the aircraft Euler angles (roll, pitch, yaw) = (phi, th, psi).
     """
-    
     R00 = 1 - 2*q[2]**2 - 2*q[3]**2
     R10 = 2*q[1]*q[2] + 2*q[3]*q[0]
     if np.sqrt(R00**2 + R10**2) >= .000001:
@@ -75,6 +74,21 @@ def quat_to_euler(q):
         th = np.arcsin(-2*q[1]*q[3] + 2*q[2]*q[0])
         psi = 0.0
     return phi, th, psi
+
+def euler_to_quat(phi, th, psi):
+    """
+    Converts the aircraft Euler angles (roll, pitch, yaw) = (phi, th, psi)
+    into the unit quaternion:
+
+    q = (w, x, y, z) = w + (x i, y j, z k)
+    """
+    phi = phi/2.0
+    th = th/2.0
+    psi = psi/2.0
+    return np.array([np.cos(phi)*np.cos(th)*np.cos(psi) + np.sin(phi)*np.sin(th)*np.sin(psi),
+                     np.sin(phi)*np.cos(th)*np.cos(psi) - np.cos(phi)*np.sin(th)*np.sin(psi),
+                     np.cos(phi)*np.sin(th)*np.cos(psi) + np.sin(phi)*np.cos(th)*np.sin(psi),
+                     np.cos(phi)*np.cos(th)*np.sin(psi) - np.sin(phi)*np.sin(th)*np.cos(psi)])
 
 def axis_to_quat(th, a):
     """
@@ -98,10 +112,10 @@ def quat_to_axis(q):
 
     Returns th, a
     """
-	if np.sqrt(1 - q[0]**2) < 1e-6:
-		return 0.0, np.array([1.0, 0.0, 0.0])
-	else:
-    	return 2*np.arccos(q[0]), np.array([q[1]/np.sqrt(1 - q[0]**2),
+    if np.sqrt(1 - q[0]**2) < 1e-6:
+        return 0.0, np.array([1.0, 0.0, 0.0])
+    else:
+        return 2*np.arccos(q[0]), np.array([q[1]/np.sqrt(1 - q[0]**2),
                                         q[2]/np.sqrt(1 - q[0]**2),
                                         q[3]/np.sqrt(1 - q[0]**2)])
 
@@ -147,6 +161,11 @@ if __name__ == '__main__':
     # R1 = quat_to_R(q1)
     # print R1.T
     # print quat_to_R(invert_quat(q1))
+
+    # Testing euler to quat
+    euler = np.array([np.pi/4, np.pi/6, np.pi/5])
+    print euler
+    print quat_to_euler(euler_to_quat(*euler))
 
     # Testing R to euler failure
     phi = -np.pi/4

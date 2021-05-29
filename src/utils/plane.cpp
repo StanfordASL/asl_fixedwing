@@ -18,7 +18,6 @@
 	@param[in] filepath    to ctrl_params.csv file, which should 
                            store in the order: [c_T0, c_TVom, a_0, 
                            c_a, e_0, c_e, r_0, c_r]
-
 */
 Plane::Plane(ros::NodeHandle& nh, const unsigned ctrl_type, 
              const std::string& filepath, bool debug)

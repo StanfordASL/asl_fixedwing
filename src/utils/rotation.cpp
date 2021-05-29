@@ -104,6 +104,23 @@ void Rot::quat_to_euler(const Eigen::Vector4d q, Eigen::Vector3d& e) {
 }
 
 /**
+    @brief Converts aircraft Euler angles (ZYX) (Yaw-Pitch-Roll) (psi, theta, phi)
+    into unit quaternion
+
+    @param[in] e  euler angles e = (phi, theta, psi) = (roll, pitch, yaw)
+    @param[in] q  unit quaternion q = (w, x, y, z) = w + (x i, y j, z k)
+*/
+void Rot::euler_to_quat(const Eigen::Vector3d e, Eigen::Vector4d& q) {
+    double phi = 0.5 * e(0);
+    double th = 0.5 * e(1);
+    double psi = 0.5 * e(2);
+    q(0) = cos(phi) * cos(th) * cos(psi) + sin(phi) * sin(th) * sin(psi);
+    q(1) = sin(phi) * cos(th) * cos(psi) - cos(phi) * sin(th) * sin(psi);
+    q(2) = cos(phi) * sin(th) * cos(psi) + sin(phi) * cos(th) * sin(psi);
+    q(3) = cos(phi) * cos(th) * sin(psi) - sin(phi) * sin(th) * cos(psi);
+}
+
+/**
 	@brief Converts an axis and angle into a unit quaternion
 
 	@param[in] th  angle

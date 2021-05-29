@@ -20,6 +20,8 @@ void quat_to_R(const Eigen::Vector4d q, Eigen::Matrix3d& R);
 
 void quat_to_euler(const Eigen::Vector4d q, Eigen::Vector3d& e);
 
+void euler_to_quat(const Eigen::Vector3d e, Eigen::Vector4d& q);
+
 void axis_to_quat(const double th, Eigen::Vector3d a, Eigen::Vector4d& q);
 
 void quat_to_axis(const Eigen::Vector4d q, double& th, Eigen::Vector3d& a);
