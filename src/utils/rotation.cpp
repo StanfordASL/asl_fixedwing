@@ -123,39 +123,43 @@ void Rot::euler_to_quat(const Eigen::Vector3d e, Eigen::Vector4d& q) {
 /**
 	@brief Converts an axis and angle into a unit quaternion
 
-	@param[in] th  angle
-	@param[in] a   axis a = (x, y, z) 
+	@param[in] aa  axis/angle aa = (x, y, z), th = ||aa||, e = aa/th 
 	@param[in] q   unit quaternion q = (w, x, y, z) = w + (x i, y j, z k) 
 */
-void Rot::axis_to_quat(const double th, Eigen::Vector3d a, Eigen::Vector4d& q) {
-	a.normalize();
-	q(0) = cos(th/2.0);
-	q(1) = a(0)*sin(th/2.0);
-	q(2) = a(1)*sin(th/2.0);
-	q(3) = a(2)*sin(th/2.0);
-}
-    
+void Rot::axis_to_quat(const Eigen::Vector3d aa, Eigen::Vector4d& q) {
+    double th = aa.norm();
+    if (th < 0.0000001) {
+        q(0) = 1.0;
+        q(1) = 0.0;
+        q(2) = 0.0;
+        q(3) = 0.0;
+    }
+    else {
+        Eigen::Vector3d e = aa.normalized();
+	    q(0) = cos(th/2.0);
+	    q(1) = e(0)*sin(th/2.0);
+	    q(2) = e(1)*sin(th/2.0);
+	    q(3) = e(2)*sin(th/2.0);
+    }
+}    
 
 /**
 	@brief Converts a unit quaternion into a normalized axis and angle.
 
 	@param[in] q   unit quaternion q = (w, x, y, z) = w + (x i, y j, z k) 
-	@param[in] th  angle
-	@param[in] a   axis a = (x, y, z) 
+	@param[in] aa  axis/angle aa = (x, y, z), th = ||aa||, e = aa/th 
 */
-void Rot::quat_to_axis(const Eigen::Vector4d q, double& th, Eigen::Vector3d& a) {
-	if (q(0) > 0.999999) { // no rotation so you can arbitarily pick a
-		th = 0.0;
-		a(0) = 1.0;
-		a(1) = 0.0;
-		a(2) = 0.0;
+void Rot::quat_to_axis(const Eigen::Vector4d q, Eigen::Vector3d& aa) {
+	if (q(0) > 0.9999999) { // no rotation
+		aa(0) = 0.0;
+		aa(1) = 0.0;
+		aa(2) = 0.0;
 	}
 	else {
-		th = 2.0*acos(q(0));
-    	double d = sqrt(1.0 - q(0)*q(0));
-    	a(0) = q(1)/d;
-    	a(1) = q(2)/d;
-    	a(2) = q(3)/d;
+    	double m = 2.0*acos(q(0))/sqrt(1.0 - q(0)*q(0));
+    	aa(0) = m*q(1);
+    	aa(1) = m*q(2);
+    	aa(2) = m*q(3);
 	}
 }
 

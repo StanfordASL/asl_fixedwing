@@ -44,6 +44,7 @@ Eigen::Vector4d body_q; // quaternion for body
 Eigen::Vector4d rel_q; // quaternion for relative orientation
 Eigen::Vector3d axis;
 double angle;
+Eigen::Vector3d aa;
 Eigen::Vector3d rel_om_wrld;
 Eigen::Matrix3d R;
 std::vector<int> ctrl_map = {4, 5, 6, 7}; // maps to gazebo message indices
@@ -65,7 +66,9 @@ void gz_links_cb(const gazebo_msgs::LinkStates::ConstPtr& msg) {
 
 		// Compute relative orientation
 		Rot::compose_quats(body_q, ctrl_q, rel_q); // compose the rotations
-		Rot::quat_to_axis(rel_q, angle, axis);
+		Rot::quat_to_axis(rel_q, aa);
+        angle = aa.norm();
+        axis = aa.normalized();
 		gz_ctrl[i] = angle;
 	}
 

@@ -90,17 +90,22 @@ def euler_to_quat(phi, th, psi):
                      np.cos(phi)*np.sin(th)*np.cos(psi) + np.sin(phi)*np.cos(th)*np.sin(psi),
                      np.cos(phi)*np.cos(th)*np.sin(psi) - np.sin(phi)*np.sin(th)*np.cos(psi)])
 
-def axis_to_quat(th, a):
+def axis_to_quat(aa):
     """
-    Converts an axis a = (x, y, z) and angle th into a unit quaternion
+    Converts an axis/angle aa = (x, y, z) with angle th = ||aa|| and
+    axis e = aa/th into a unit quaternion:
 
     q = (w, x, y, z) = w + (x i, y j, z k) 
     """
-    a = a/np.linalg.norm(a)
-    return np.array([np.cos(th/2),
-                     a[0]*np.sin(th/2),
-                     a[1]*np.sin(th/2),
-                     a[2]*np.sin(th/2)])
+    th = np.linalg.norm(aa)
+    if th < 1e-6:
+        return np.array([1.0, 0.0, 0.0, 0.0])
+    else:
+        e = aa/th
+        return np.array([np.cos(th/2),
+                     e[0]*np.sin(th/2),
+                     e[1]*np.sin(th/2),
+                     e[2]*np.sin(th/2)])
 
 def quat_to_axis(q):
     """
@@ -108,16 +113,17 @@ def quat_to_axis(q):
 
     q = (w, x, y, z) = w + (x i, y j, z k) 
 
-    into a normalized axis a = (x, y, z) and angle th.
+    into a axis/angle aa = (x, y, z) with angle th = ||aa||
+    and axis e = aa/th
 
-    Returns th, a
+    Returns aa
     """
     if np.sqrt(1 - q[0]**2) < 1e-6:
-        return 0.0, np.array([1.0, 0.0, 0.0])
+        return np.array([0.0, 0.0, 0.0])
     else:
-        return 2*np.arccos(q[0]), np.array([q[1]/np.sqrt(1 - q[0]**2),
-                                        q[2]/np.sqrt(1 - q[0]**2),
-                                        q[3]/np.sqrt(1 - q[0]**2)])
+        return 2*np.arccos(q[0])*np.array([q[1]/np.sqrt(1 - q[0]**2),
+                                           q[2]/np.sqrt(1 - q[0]**2),
+                                           q[3]/np.sqrt(1 - q[0]**2)])
 
 def compose_quats(p, q):
     """
@@ -142,17 +148,21 @@ def invert_quat(q):
 
 
 if __name__ == '__main__':
-    # # Testing quat to euler
-    # a1 = np.array([0., 0., 1.])
-    # th1 = np.pi/4
+    # Testing quat to euler
+    a1 = np.array([0., 0., 1.])
+    th1 = np.pi/4
+    aa1 = th1*a1
+    a2 = np.array([0., 1., 0.])
+    th2 = np.pi/4
+    aa2 = th2*a2
 
-    # a2 = np.array([0., 1., 0.])
-    # th2 = np.pi/4
+    q1 = axis_to_quat(aa1)
+    q2 = axis_to_quat(aa2)
 
-    # q1 = axis_to_quat(th1, a1)
-    # q2 = axis_to_quat(th2, a2)
+    print quat_to_euler(compose_quats(q1, q2))
 
-    # print quat_to_euler(compose_quats(q1, q2))
+    aa = quat_to_axis(q1)
+    print np.linalg.norm(aa), aa/np.linalg.norm(aa)
 
     # # Testing inverse quaternion
     # a1 = np.array([1., 0., 0.])
