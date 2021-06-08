@@ -33,6 +33,8 @@ void invert_quat(Eigen::Vector4d& q);
 double rad_to_deg(double th);
 
 double deg_to_rad(double th);
+
+double wrap_angle(double th);
 }
 
 #endif // ROTATION_HPP

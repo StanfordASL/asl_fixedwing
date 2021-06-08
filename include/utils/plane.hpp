@@ -25,11 +25,43 @@ using Vec4 = Eigen::Vector4d;
 using Vec3 = Eigen::Vector3d;
 
 class Plane {
+public:
+    // Constructor
+    Plane(ros::NodeHandle& nh, const unsigned ctrl_type, 
+          const std::string& filepath, bool debug = false);
+    
+    // Send control commands
+    void send_control(const Vec4& u);
+    
+    // MAVROS related functions
+    void pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
+    void twist_cb(const geometry_msgs::TwistStamped::ConstPtr& msg);
+    void state_cb(const mavros_msgs::State::ConstPtr& msg);
+    void act_cb(const mavros_msgs::ActuatorControl::ConstPtr& msg);
+
+    // Accessing useful information
+    Vec3 get_pos();
+    Vec3 get_euler();
+    Vec3 get_vel();
+    Vec3 get_bodyrate();
+    double get_thrust();
+    Vec3 get_ctrl_srf();
+    bool px4_connected();
+    bool px4_armed();
+    std::string px4_mode();
+
+    // Control modes
+    static const unsigned BODY_RATE = 0;
+    static const unsigned CTRL_SURF = 1;
+
 private:
     // Control input helpers
     double nrmlz_ctrl_srf_cmd(const double delta, const int i);
     double nrmlz_thrust_cmd(const double T, const double V);
     void normalize_control(const Vec4& u, Vec4& u_nrmlzd, const double V);
+    
+    double dim_ctrl_srf_cmd(const double u_d, const int i);
+    double dim_thrust_cmd(const double u_T, const double V);
 
 	// Use debug to publish some internal ROS topics
     bool _debug;
@@ -49,11 +81,13 @@ private:
     ros::Subscriber _state_sub;
     ros::Subscriber _pose_sub;
     ros::Subscriber _twist_sub;
+    ros::Subscriber _act_sub;
     ros::Publisher _pos_pub;
     ros::Publisher _vel_pub;
     ros::Publisher _euler_pub;
     ros::Publisher _bodyrate_pub;
-    ros::Publisher _ctrl_pub;
+    ros::Publisher _ctrl_pub; // sends commands to PX4
+    ros::Publisher _act_pub; // publishes dimensionalized actuator values
 
     // Aircraft state information
     Vec3 _p_b_i_I; // body pos relative to inertial in I coord.
@@ -63,38 +97,13 @@ private:
     Vec3 _om_B_I_B; // ang vel (p, q, r) of B w.r.t I frame, in B coordinates
     const Vec4 _Q_NED_TO_ENU = (Vec4() << 0.0, -0.5*sqrt(2.0), -0.5*sqrt(2.0), 0.0).finished();
     const Vec4 _Q_FLU_TO_FRD = (Vec4() << 0.0, 1.0, 0.0, 0.0).finished();
-    
+    double _thrust;
+    Vec3 _ctrl_srf;
+
     // PX4 state information
     bool _px4_connected = false; // PX4 connection exists
     bool _px4_armed = false; // PX4 armed
     std::string _px4_mode; // PX4 flight mode
-
-
-public:
-    // Constructor
-    Plane(ros::NodeHandle& nh, const unsigned ctrl_type, 
-          const std::string& filepath, bool debug = false);
-    
-    // Send control commands
-    void send_control(const Vec4& u);
-    
-    // MAVROS related functions
-    void pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
-    void twist_cb(const geometry_msgs::TwistStamped::ConstPtr& msg);
-    void state_cb(const mavros_msgs::State::ConstPtr& msg);
-    
-    // Accessing useful information
-    Vec3 get_pos();
-    Vec3 get_euler();
-    Vec3 get_vel();
-    Vec3 get_bodyrate();
-    bool px4_connected();
-    bool px4_armed();
-    std::string px4_mode();
-
-    // Control modes
-    static const unsigned BODY_RATE = 0;
-    static const unsigned CTRL_SURF = 1;
 };
 
 #endif // PLANE_HPP

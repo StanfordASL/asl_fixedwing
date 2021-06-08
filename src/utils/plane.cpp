@@ -12,7 +12,8 @@
 
 /** 
 	@brief Constructor which loads parameters from csv file.
-
+    
+    @param[in] nh          ROS nodehandle
     @param[in] ctrl_type   control type, either Plane::BODY_RATE 
                            or Plane::CTRL_SURF
 	@param[in] filepath    to ctrl_params.csv file, which should 
@@ -24,14 +25,20 @@ Plane::Plane(ros::NodeHandle& nh, const unsigned ctrl_type,
              : _ctrl_type(ctrl_type), _debug(debug) {
     // Check ctrl_type is valid
     if (_ctrl_type != BODY_RATE and _ctrl_type != CTRL_SURF) {
-        throw "Control type must be either BODY_RATE or CTRL_SURF";
+        throw std::runtime_error("Control type must be either BODY_RATE or CTRL_SURF");
     }
 
 	// Load relevant control parameters from csv file
 	Eigen::VectorXd ctrl_params = Data::load_vector(filepath + "/ctrl_params.csv");
-    _c_T0 = ctrl_params(0);
-    _c_TVom = ctrl_params(1);
-    if (_ctrl_type == CTRL_SURF) {
+    if (ctrl_params.rows() < 2) {
+        throw std::runtime_error("Missing some control params for thrust");
+    }
+    else if (ctrl_params.rows() < 8) {
+        ROS_INFO("Missing control params for ctrl srf model, not publishing...");
+        _delta_0.setZero();
+        _c_delta.setZero();
+    }
+    else {
 	    _delta_0(0) = ctrl_params(2); // a_0
 	    _delta_0(1) = ctrl_params(4); // e_0
 	    _delta_0(2) = ctrl_params(6); // r_0
@@ -39,6 +46,8 @@ Plane::Plane(ros::NodeHandle& nh, const unsigned ctrl_type,
 	    _c_delta(1) = ctrl_params(5); // c_e
 	    _c_delta(2) = ctrl_params(7); // c_r
     }
+    _c_T0 = ctrl_params(0);
+    _c_TVom = ctrl_params(1);
 
     // Initialize variables
     _p_b_i_I.setZero();
@@ -46,6 +55,8 @@ Plane::Plane(ros::NodeHandle& nh, const unsigned ctrl_type,
     _q_I_to_B.setZero();
     _euler.setZero();
     _om_B_I_B.setZero();
+    _thrust = 0.0;
+    _ctrl_srf.setZero();
     
     // Define MAVROS subscribers
     _state_sub = nh.subscribe<mavros_msgs::State>
@@ -54,7 +65,9 @@ Plane::Plane(ros::NodeHandle& nh, const unsigned ctrl_type,
                 ("mavros/local_position/pose", 1, &Plane::pose_cb, this);
     _twist_sub = nh.subscribe<geometry_msgs::TwistStamped>
                 ("mavros/local_position/velocity_body", 1, &Plane::twist_cb, this);
-    
+    _act_sub = nh.subscribe<mavros_msgs::ActuatorControl>
+                ("mavros/target_actuator_control", 1, &Plane::act_cb, this);
+
     // Define MAVROS publisher
     if (_ctrl_type == CTRL_SURF) {
         _ctrl_pub = nh.advertise<mavros_msgs::ActuatorControl>
@@ -76,6 +89,8 @@ Plane::Plane(ros::NodeHandle& nh, const unsigned ctrl_type,
                     ("plane/euler", 10);
         _bodyrate_pub = nh.advertise<geometry_msgs::Point>
                     ("plane/bodyrate", 10);
+        _act_pub = nh.advertise<mavros_msgs::ActuatorControl>
+                    ("plane/actuators", 10);
     }
 }
 
@@ -141,8 +156,8 @@ void Plane::normalize_control(const Vec4& u, Vec4& u_nrmlzd, const double V) {
 	into a normalized [-1,1] command that can be sent over
 	actuator_control MAVROS topics. Assumes a linear mapping.
 
-	@param[in]  cmd  control surface deflection cmd [radians]
-	@param[in]  i    index int 0=a, 1=e, 2=r
+	@param[in]  delta  control surface deflection cmd [radians]
+	@param[in]  i     index int 0=a, 1=e, 2=r
 	@param[out] normalized command in range [-1, 1]
 */
 double Plane::nrmlz_ctrl_srf_cmd(const double delta, const int i) {
@@ -154,13 +169,40 @@ double Plane::nrmlz_ctrl_srf_cmd(const double delta, const int i) {
 	[0,1] command that can be sent over actuator_control MAVROS 
 	topics. Assumes a quadratic mapping from cmd to T.
 
-    @param[in]  cmd  thrust command [N]
+    @param[in]  T    thrust command [N]
 	@param[in]  V    rel. windspeed parallel to body x axis [m/s]
     @param[out] normalized command in range [0, 1]
 */
 double Plane::nrmlz_thrust_cmd(const double T, const double V) {
     return std::min(1.0, std::max(0.0, 0.5*(_c_TVom*V + 
 				sqrt( (_c_TVom*V)*(_c_TVom*V) + 4.0*T/_c_T0 )) ));
+}
+
+/**
+    @brief Converts a control surface deflection angle setpoint
+    from a normalized [-1,1] command to dimensional angle.
+
+    @param[in]  u_d  normalized control surface deflection setpoint
+    @param[in]  i    index int 0=a, 1=e, 2=r
+    @param[out] control surface deflection setpoint [rad]
+*/
+double Plane::dim_ctrl_srf_cmd(const double u_d, const int i) {
+    return _c_delta(i)*u_d + _delta_0(i);
+}
+
+/**
+    @brief Converts a thrust value setpoint from a normalized
+    [0,1] command to value in N. 
+
+    @param[in]  u_T  normalized thrust command
+    @param[in]  V    rel. windspeed parallel to body x axis [m/s]
+    @param[out] thrust setpoint [N]
+*/
+double Plane::dim_thrust_cmd(const double u_T, const double V) {
+    if (u_T < .000001) return 0.0;
+    else {
+        return _c_T0*(1.0 - _c_TVom*V/u_T)*pow(u_T, 2.0);
+    }
 }
 
 /**
@@ -235,6 +277,33 @@ void Plane::twist_cb(const geometry_msgs::TwistStamped::ConstPtr& msg) {
 }
 
 /**
+    @brief Callback for extracting current thrust and control surface
+    deflection angle setpoints.
+
+    @param[in] msg  message from /mavros/target_actuator_control
+*/
+void Plane::act_cb(const mavros_msgs::ActuatorControl::ConstPtr& msg) {
+    if (msg->group_mix == mavros_msgs::ActuatorControl::PX4_MIX_FLIGHT_CONTROL) {
+        _ctrl_srf(0) = dim_ctrl_srf_cmd(msg->controls[0], 0);
+        _ctrl_srf(1) = dim_ctrl_srf_cmd(msg->controls[1], 1);
+        _ctrl_srf(2) = dim_ctrl_srf_cmd(msg->controls[2], 2);
+        _thrust = dim_thrust_cmd(msg->controls[3], _v_b_I_B(0));
+    }
+    else throw "Group mix of /mavros/target_actuator_control not recognized";
+    
+    if (_debug) {
+        // Publish thrust and deflection angles (in degrees)
+        mavros_msgs::ActuatorControl actuators;
+        actuators.group_mix = msg->group_mix;
+        actuators.controls[0] = Rot::rad_to_deg(_ctrl_srf(0));
+        actuators.controls[1] = Rot::rad_to_deg(_ctrl_srf(1));
+        actuators.controls[2] = Rot::rad_to_deg(_ctrl_srf(2));
+        actuators.controls[3] = _thrust;
+        _act_pub.publish(actuators);
+    }
+}
+
+/**
     @brief Callback for extracting PX4 status from MAVROS.
 
     @param[in] msg  message from /mavros/state
@@ -274,6 +343,19 @@ Vec3 Plane::get_bodyrate() {
     return _om_B_I_B;
 }
 
+/**
+    @brief Returns current commanded thrust in N.
+*/
+double Plane::get_thrust() {
+    return _thrust;
+}
+
+/**
+    @brief Returns current commanded control surface deflection angles in rad.
+*/
+Vec3 Plane::get_ctrl_srf() {
+    return _ctrl_srf;
+}
 
 /**
     @brief Returns true if PX4 is connected
