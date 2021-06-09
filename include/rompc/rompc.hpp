@@ -19,7 +19,7 @@ class ROMPC {
 public:
 	ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type, 
              const unsigned target_type, const unsigned att_type, 
-             const std::string filepath)
+             const std::string filepath);
 	void init(const double t0, const Eigen::Vector3d p, const double psi);
 	void update(const double t, const Vec3 p_b_i_I, const Vec3 v_b_I_B, 
                 const Vec3 euler, const Vec3 om_B_I_B, const double T,

@@ -153,14 +153,17 @@ void ROMPC::update(const double t, const Vec3 p_b_i_I, const Vec3 v_b_I_B,
     if (!_init) return;
 
     // Compute position relative to target in target reference frame coord.
-    // TODO need to do a rotation from I coordinates to R coordinates
-    Vec3 e_pos = p_b_i_I - _target->get_pos(t - _t0);
+    Vec3 target_euler = _target->get_att_euler(t - _t0);
+    Eigen::Matrix3d R_R_to_I;
+    Rot::euler_to_R(target_euler, R_R_to_I);
+    Vec3 e_pos = R_R_to_I.transpose() * (p_b_i_I - _target->get_pos(t - _t0));
 
+    // TODO this should also be rotated into R coordiantes for Andrew
     // Compute velocity relative to target
     Vec3 e_vel = v_b_I_B - _target->get_vel(t - _t0);
 
     // Compute attitude relative to target
-    Vec3 e_att = euler - _target->get_att_euler(t - _t0);
+    Vec3 e_att = euler - target_euler;
 
     // Publish errors
     geometry_msgs::Point pos_error;

@@ -1,8 +1,6 @@
 from os.path import dirname, abspath, join, isfile, isdir
-from os import remove, mkdir
 import sys
 import rosbag
-import pdb
 
 def get_data_dir():
     return dirname(abspath(__file__))
@@ -75,6 +73,20 @@ class ctrlStream:
             self.u[i].append(u[i])
 
 
+class zStream:
+    def __init__(self):
+        self.z = []
+        self.t = []
+
+    def add_point(self, t, z):
+        self.t.append(t)
+        if not self.z:
+            self.z = [[z[i]] for i in range(len(z))]
+        else:
+            for i in range(len(z)):
+                self.z[i].append(z[i])
+
+
 class planeData:
     """
     A class to extract data from Plane topic messages
@@ -107,26 +119,32 @@ class rompcData:
     A class to extract data from ROMPC topic messages
     """
     def __init__(self):
-        self.pos = posStream() # inertial pos x_i, y_i, z_i [m]
-        self.vel = velStream() # body frame vel u, v, w [m/s]
-        self.euler = eulerStream() # euler angle phi, th, psi [deg]
-        self.om = omStream() # body rate p, q, r [deg/s]
-        self.act = ctrlStream() # thrust [N] and ctrl srf def [deg]
+        self.e_pos = posStream() # pos error x_r, y_r, z_r [m]
+        self.e_vel = velStream() # body frame vel error [m/s]
+        self.e_euler = eulerStream() # euler angle error [deg]
+        self.ubar = ctrlStream() # nominal control minus eq. control
+        self.u = ctrlStream() # control minus eq. control
+        self.zbar = zStream()
+        self.zhat = zStream()
 
     def add_msg(self, topic, msg, t):
         """
         Add a piece of data from a ROS message
         """
-        if topic == 'position':
-            self.pos.add_point(t, msg.x, msg.y, msg.z)
-        elif topic == 'velocity':
-            self.vel.add_point(t, msg.x, msg.y, msg.z)
-        elif topic == 'euler':
-            self.euler.add_point(t, msg.x, msg.y, msg.z)
-        elif topic == 'bodyrate':
-            self.om.add_point(t, msg.x, msg.y, msg.z)
-        elif topic == 'actuators':
-            self.act.add_point(t, msg.controls)
+        if topic == 'pos_error':
+            self.e_pos.add_point(t, msg.x, msg.y, msg.z)
+        elif topic == 'vel_error':
+            self.e_vel.add_point(t, msg.x, msg.y, msg.z)
+        elif topic == 'euler_error':
+            self.e_euler.add_point(t, msg.x, msg.y, msg.z)
+        elif topic == 'ubar':
+            self.ubar.add_point(t, msg.data)
+        elif topic == 'u':
+            self.u.add_point(t, msg.data)
+        elif topic == 'zbar':
+            self.zbar.add_point(t, msg.data)
+        elif topic == 'zhat':
+            self.zhat.add_point(t, msg.data)
 
 
 class RosbagData:
@@ -135,13 +153,16 @@ class RosbagData:
     """
     def __init__(self, fpath):
         self.plane = planeData()
-        #self.rompc = ctrlData()
+        self.rompc = rompcData()
         self.t0 = None
 
         bag = rosbag.Bag(fpath)
         topics = ['/plane/position', '/plane/velocity', 
                   '/plane/euler', '/plane/bodyrate', 
-                  '/plane/actuators']
+                  '/plane/actuators', '/rompc/pos_error', 
+                  '/rompc/vel_error', '/rompc/euler_error', 
+                  '/rompc/ubar', '/rompc/u', 
+                  '/rompc/zbar', '/rompc/zhat']
         for topic, msg, t in bag.read_messages(topics=topics):
             self.add_msg(t, msg, topic)
 
@@ -165,4 +186,3 @@ if __name__ == '__main__':
     data_dir = get_data_dir()
     fpath = join(data_dir, 'rompc.bag')
     data = RosbagData(fpath)
-    pdb.set_trace()
