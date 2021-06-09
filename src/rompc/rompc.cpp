@@ -199,9 +199,10 @@ void ROMPC::update(const double t, const Vec3 p_b_i_I, const Vec3 v_b_I_B,
     }
     u_prev -= _u_eq;
 
+    // TODO y is different depending on what model is used
     // Update ROMPC controller with error measurements
     Eigen::Matrix<double, 9, 1>  y;
-    y << e_vel, e_pos, e_att;
+    y << e_vel, e_att, e_pos;
     ROMPC::update_ctrl(t, y, u_prev);    
 }
 
