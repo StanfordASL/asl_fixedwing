@@ -126,11 +126,18 @@ class rompcData:
         self.u = ctrlStream() # control minus eq. control
         self.zbar = zStream()
         self.zhat = zStream()
+        self.t0 = None
+        self.tf = None
 
     def add_msg(self, topic, msg, t):
         """
         Add a piece of data from a ROS message
         """
+        if self.t0 is None:
+            self.t0 = t
+            self.tf = t
+        if t > self.tf:
+            self.tf = t
         if topic == 'pos_error':
             self.e_pos.add_point(t, msg.x, msg.y, msg.z)
         elif topic == 'vel_error':
@@ -166,17 +173,12 @@ class RosbagData:
         for topic, msg, t in bag.read_messages(topics=topics):
             self.add_msg(t, msg, topic)
 
-    def extract_time(self, msg):
-        if self.t0 is None:
-            self.t0 = t
-        return t - self.t0
-
     def add_msg(self, t, msg, topic):
+        main, sub = topic.split('/')[1:3]
         t = t.secs + t.nsecs/1e9
         if self.t0 is None:
             self.t0 = t;
         t -= self.t0
-        main, sub = topic.split('/')[1:3]
         if main == 'plane':
             self.plane.add_msg(sub, msg, t)
         elif main == 'rompc':
