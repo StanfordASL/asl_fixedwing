@@ -9,6 +9,7 @@
 */
 
 #include <Eigen/Dense>
+#include <std_msgs/Float32MultiArray.h>
 #include <geometry_msgs/Point.h>
 #include <geometry_msgs/Quaternion.h>
 #include <geometry_msgs/Vector3.h>
@@ -26,6 +27,8 @@ void eigen3d_to_point(const Eigen::Vector3d x, geometry_msgs::Point& p);
 void eigen4d_to_quat(const Eigen::Vector4d& x, geometry_msgs::Quaternion& q);
 
 void eigen3d_to_vec3(const Eigen::Vector3d& x, geometry_msgs::Vector3& v);
+
+void eigenxd_to_multarr(const Eigen::VectorXd& x, std_msgs::Float32MultiArray& a);
 
 }
 

@@ -28,7 +28,7 @@ class Plane {
 public:
     // Constructor
     Plane(ros::NodeHandle& nh, const unsigned ctrl_type, 
-          const std::string& filepath, bool debug = false);
+          const std::string& filepath);
     
     // Send control commands
     void send_control(const Vec4& u);
@@ -63,9 +63,6 @@ private:
     double dim_ctrl_srf_cmd(const double u_d, const int i);
     double dim_thrust_cmd(const double u_T, const double V);
 
-	// Use debug to publish some internal ROS topics
-    bool _debug;
-    
     // Parameters for scaling control surface deflection commands
 	Vec3 _delta_0; // in order of [a, e, r]
 	Vec3 _c_delta; // in order of [a, e, r]

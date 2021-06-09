@@ -21,8 +21,8 @@
                            c_a, e_0, c_e, r_0, c_r]
 */
 Plane::Plane(ros::NodeHandle& nh, const unsigned ctrl_type, 
-             const std::string& filepath, bool debug)
-             : _ctrl_type(ctrl_type), _debug(debug) {
+             const std::string& filepath)
+             : _ctrl_type(ctrl_type) {
     // Check ctrl_type is valid
     if (_ctrl_type != BODY_RATE and _ctrl_type != CTRL_SURF) {
         throw std::runtime_error("Control type must be either BODY_RATE or CTRL_SURF");
@@ -80,18 +80,16 @@ Plane::Plane(ros::NodeHandle& nh, const unsigned ctrl_type,
         ROS_INFO("Control type set to BODY_RATE");
     }
 
-    if (_debug) {
-        _pos_pub = nh.advertise<geometry_msgs::Point>
-                    ("plane/position", 10);
-        _vel_pub = nh.advertise<geometry_msgs::Point>
-                    ("plane/velocity", 10);
-        _euler_pub = nh.advertise<geometry_msgs::Point>
-                    ("plane/euler", 10);
-        _bodyrate_pub = nh.advertise<geometry_msgs::Point>
-                    ("plane/bodyrate", 10);
-        _act_pub = nh.advertise<mavros_msgs::ActuatorControl>
-                    ("plane/actuators", 10);
-    }
+    _pos_pub = nh.advertise<geometry_msgs::Point>
+                ("plane/position", 10);
+    _vel_pub = nh.advertise<geometry_msgs::Point>
+                ("plane/velocity", 10);
+    _euler_pub = nh.advertise<geometry_msgs::Point>
+                ("plane/euler", 10);
+    _bodyrate_pub = nh.advertise<geometry_msgs::Point>
+                ("plane/bodyrate", 10);
+    _act_pub = nh.advertise<mavros_msgs::ActuatorControl>
+                ("plane/actuators", 10);
 }
 
 /**
@@ -229,19 +227,17 @@ void Plane::pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg) {
     // Compute Euler angles from quaternion
     Rot::quat_to_euler(_q_I_to_B, _euler);
 
-    if (_debug) {
-        // Publish position
-        geometry_msgs::Point pos;
-        Utils::eigen3d_to_point(_p_b_i_I, pos);
-        _pos_pub.publish(pos);
+    // Publish position
+    geometry_msgs::Point pos;
+    Utils::eigen3d_to_point(_p_b_i_I, pos);
+    _pos_pub.publish(pos);
 
-        // Publish euler angles
-        geometry_msgs::Point euler;
-        euler.x = Rot::rad_to_deg(_euler(0)); 
-        euler.y = Rot::rad_to_deg(_euler(1)); 
-        euler.z = Rot::rad_to_deg(_euler(2));
-        _euler_pub.publish(euler);
-    }
+    // Publish euler angles
+    geometry_msgs::Point euler;
+    euler.x = Rot::rad_to_deg(_euler(0)); 
+    euler.y = Rot::rad_to_deg(_euler(1)); 
+    euler.z = Rot::rad_to_deg(_euler(2));
+    _euler_pub.publish(euler);
 }
 
 /**
@@ -261,19 +257,17 @@ void Plane::twist_cb(const geometry_msgs::TwistStamped::ConstPtr& msg) {
     _om_B_I_B(1) = -msg->twist.angular.y;
     _om_B_I_B(2) = -msg->twist.angular.z;
 
-    if (_debug) {
-        // Publish velocity
-        geometry_msgs::Point vel;
-        Utils::eigen3d_to_point(_v_b_I_B, vel);
-        _vel_pub.publish(vel);
+    // Publish velocity
+    geometry_msgs::Point vel;
+    Utils::eigen3d_to_point(_v_b_I_B, vel);
+    _vel_pub.publish(vel);
 
-        // Publish body rates
-        geometry_msgs::Point om;
-        om.x = Rot::rad_to_deg(_om_B_I_B(0));
-        om.y = Rot::rad_to_deg(_om_B_I_B(1));
-        om.z = Rot::rad_to_deg(_om_B_I_B(2));
-        _bodyrate_pub.publish(om);
-    }
+    // Publish body rates
+    geometry_msgs::Point om;
+    om.x = Rot::rad_to_deg(_om_B_I_B(0));
+    om.y = Rot::rad_to_deg(_om_B_I_B(1));
+    om.z = Rot::rad_to_deg(_om_B_I_B(2));
+    _bodyrate_pub.publish(om);
 }
 
 /**
@@ -291,16 +285,14 @@ void Plane::act_cb(const mavros_msgs::ActuatorControl::ConstPtr& msg) {
     }
     else throw "Group mix of /mavros/target_actuator_control not recognized";
     
-    if (_debug) {
-        // Publish thrust and deflection angles (in degrees)
-        mavros_msgs::ActuatorControl actuators;
-        actuators.group_mix = msg->group_mix;
-        actuators.controls[0] = Rot::rad_to_deg(_ctrl_srf(0));
-        actuators.controls[1] = Rot::rad_to_deg(_ctrl_srf(1));
-        actuators.controls[2] = Rot::rad_to_deg(_ctrl_srf(2));
-        actuators.controls[3] = _thrust;
-        _act_pub.publish(actuators);
-    }
+    // Publish thrust and deflection angles (in degrees)
+    mavros_msgs::ActuatorControl actuators;
+    actuators.group_mix = msg->group_mix;
+    actuators.controls[0] = Rot::rad_to_deg(_ctrl_srf(0));
+    actuators.controls[1] = Rot::rad_to_deg(_ctrl_srf(1));
+    actuators.controls[2] = Rot::rad_to_deg(_ctrl_srf(2));
+    actuators.controls[3] = _thrust;
+    _act_pub.publish(actuators);
 }
 
 /**

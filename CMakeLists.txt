@@ -163,6 +163,7 @@ target_link_libraries(position ${catkin_LIBRARIES})
 add_executable(rompc_node scripts/rompc/rompc_node.cpp
 	src/utils/data.cpp
 	src/rompc/rompc.cpp
+    src/rompc/rompc_utils.cpp
     src/utils/plane.cpp
     src/utils/rotation.cpp
     src/utils/utils.cpp)

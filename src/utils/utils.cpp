@@ -28,3 +28,7 @@ void Utils::eigen4d_to_quat(const Eigen::Vector4d& x, geometry_msgs::Quaternion&
 void Utils::eigen3d_to_vec3(const Eigen::Vector3d& x, geometry_msgs::Vector3& v) {
     v.x = x(0); v.y = x(1); v.z = x(2);
 }
+
+void Utils::eigenxd_to_multarr(const Eigen::VectorXd& x, std_msgs::Float32MultiArray& a) {
+    a.data = std::vector<float>(x.data(), x.data() + x.size());
+}

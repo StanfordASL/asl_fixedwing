@@ -122,6 +122,8 @@ def sgf_equilibrium(S, gamma):
     to fly with speed S in steady-glidelsope flight.
     Additionally, respecting control constraints and trying
     to minimize the control surface deflections. """
+    S = float(S)
+    gamma = float(gamma)
 
     # Create symbolic state and control vars
     uvw = MX.sym('uvw', 3)
@@ -194,6 +196,8 @@ def stf_equilibrium(S, R):
 	S: speed in m/s
 	R: turning radius in m
 	"""
+    S = float(S)
+    R = float(R)
 
     # Create symbolic state and control vars
     uvw = MX.sym('uvw', 3)
@@ -400,7 +404,7 @@ def linearized_aircraft_stf(S, R):
     x0, u0 = stf_equilibrium(S, R)
     x0 = x0.round(8)
     u0 = u0.round(8)
-
+    
     # Add navigation equations and build model function
     x0 = np.hstack((x0, np.zeros(3)))
     f = aircraft_stf(x0, u0)
@@ -447,13 +451,13 @@ def simplify_control(A, B, x0, u0):
 
 if __name__ == "__main__":
     # Compute an equilibrium
-    S = 13. # m/s
-    gamma = np.deg2rad(-3.5)
-    A, B, C, H, x0, u0 = linearized_aircraft_sgf(S, gamma)
-    
     #S = 13. # m/s
-    #R = 50 # m
-    #A, B, C, H, x0, u0 = linearized_aircraft_stf(S, R)
+    #gamma = np.deg2rad(-3.5)
+    #A, B, C, H, x0, u0 = linearized_aircraft_sgf(S, gamma)
+    
+    S = 13. # m/s
+    R = 50 # m
+    A, B, C, H, x0, u0 = linearized_aircraft_stf(S, R)
 
     # Simplify the model to have body rate control
-    A, B, C, H, x0, u0 = simplify_control(A, B, x0, u0)
+    #A, B, C, H, x0, u0 = simplify_control(A, B, x0, u0)
