@@ -18,7 +18,7 @@ def reducedOrderRiccati(A, B, C, H, Wz, Wu):
     R = np.matmul(Wu.T, Wu)
     Qz = np.matmul(Wz, H)
     Qz = np.matmul(Qz.T, Qz) + .001*np.eye(A.shape[0])
-    Qw = .0001*np.eye(A.shape[0])
+    Qw = 0.1*np.eye(A.shape[0])
 
     # Solve Riccati equations
     X = solve_continuous_are(A, B, Qz, R)
