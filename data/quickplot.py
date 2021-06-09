@@ -33,13 +33,13 @@ if __name__ == '__main__':
     axs[5].set_ylabel('e_w')
 
     axs[6].plot(data.rompc.e_euler.t, data.rompc.e_euler.phi, 'b.')
-    axs[6].plot(data.rompc.zhat.t, data.rompc.zhat.z[3], 'g.')
+    axs[6].plot(data.rompc.zhat.t, np.rad2deg(data.rompc.zhat.z[3]), 'g.')
     axs[6].set_ylabel('e_phi')
     axs[7].plot(data.rompc.e_euler.t, data.rompc.e_euler.th, 'b.')
-    axs[7].plot(data.rompc.zhat.t, data.rompc.zhat.z[4], 'g.')
+    axs[7].plot(data.rompc.zhat.t, np.rad2deg(data.rompc.zhat.z[4]), 'g.')
     axs[7].set_ylabel('e_th')
     axs[8].plot(data.rompc.e_euler.t, data.rompc.e_euler.psi, 'b.')
-    axs[8].plot(data.rompc.zhat.t, data.rompc.zhat.z[5], 'g.')
+    axs[8].plot(data.rompc.zhat.t, np.rad2deg(data.rompc.zhat.z[5]), 'g.')
     axs[8].set_ylabel('e_psi')
 
     axs[0].set_xlim([data.rompc.t0, data.rompc.tf])

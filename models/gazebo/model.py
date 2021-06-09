@@ -433,8 +433,8 @@ def simplify_control(A, B, x0, u0):
 	x = [u, v, w, phi, th, dpsi, x_r, y_r, z_r]
     u = [T, p, q, r].
     """
+    u0 = np.hstack((u0[0], x0[3:6])) # T0, p0, q0, r0
     x0 = np.hstack((x0[:3], x0[6:]))
-    u0 = np.hstack((u0[0], x0[3:6]))
     
     # Remove columns
     B = np.hstack((B[:,0].reshape(12,1), A[:,3:6]))
