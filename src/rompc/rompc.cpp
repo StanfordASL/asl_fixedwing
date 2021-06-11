@@ -119,6 +119,7 @@ ROMPC::ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type,
     _y.setZero();
     _zhat.setZero();
     _zbar.setZero();
+    _q_R_to_B.setZero();
 }
 
 /**
@@ -162,13 +163,16 @@ void ROMPC::update(const double t, const Vec3 p_b_i_I, const Vec3 v_b_I_B,
     Mat3 R_R_to_I;
     Rot::quat_to_R(q_I_to_R, R_R_to_I);
     Vec3 p_b_r_R = R_R_to_I.transpose() * (p_b_i_I - _target->get_pos(t - _t0));
-
+    
+    // Compute quaternion of rotation from R to B
+    Vec4 q_I_to_B;
+    Rot::euler_to_quat(euler, q_I_to_B);
+    Rot::invert_quat(q_I_to_R); // rotates in place, probs bad design
+    Rot::compose_quats(q_I_to_R, q_I_to_B, _q_R_to_B);
+    
     // Depending on the model inputs and outputs, define y and u_prev
     Vec3 e_vel, e_att, e_attrate;
-    VecX y;
-    if (_ctrl_type == CTRL_SURF) y.resize(12);
-    else if (_ctrl_type == BODY_RATE) y.resize(9);
-
+    Vec4 u_prev;
     if (_model_type == STANDARD) {
         
         // Compute body frame velocity relative to target body frame velocity
@@ -180,24 +184,26 @@ void ROMPC::update(const double t, const Vec3 p_b_i_I, const Vec3 v_b_I_B,
         // Compute body rate error 
         e_attrate = om_B_I_B - _target->get_om(t - _t0);
         
-        if (_ctrl_type == CTRL_SURF) y << e_vel, e_attrate, e_att, p_b_r_R;
-        else if (_ctrl_type == BODY_RATE) y << e_vel, e_att, p_b_r_R; 
+        if (_ctrl_type == CTRL_SURF) {
+            _y << e_vel, e_attrate, e_att, p_b_r_R;
+            u_prev << T, ctrl_srf;
+        }
+        else if (_ctrl_type == BODY_RATE) {
+            _y << e_vel, e_att, p_b_r_R;
+            u_prev << T, om_B_I_B;
+        }
     }
     else if (_model_type == CFD) {
         
         // Compute rate of change of position error in target frame coord.
-        Vec4 q_I_to_B, q_R_to_B;
-        Rot::euler_to_quat(euler, q_I_to_B);
-        Rot::invert_quat(q_I_to_R); // rotates in place, probs bad design
-        Rot::compose_quats(q_I_to_R, q_I_to_B, q_R_to_B);
         Mat3 R_B_to_R; // rotates vector from B coord to R coord
-        Rot::quat_to_R(q_R_to_B, R_B_to_R);
+        Rot::quat_to_R(_q_R_to_B, R_B_to_R);
         e_vel = R_B_to_R * v_b_I_B - 
                     _target->get_vel(t - _t0) - 
                     _target->get_om(t - _t0).cross(p_b_r_R);
 
         // Compute attitude relative to target in axis/angle param
-        Rot::quat_to_axis(q_R_to_B, e_att);
+        Rot::quat_to_axis(_q_R_to_B, e_att);
 
         // Compute rate of change of axis/angle params
         // First the angular vel of B w.r.t R is computed based on measured
@@ -205,10 +211,21 @@ void ROMPC::update(const double t, const Vec3 p_b_i_I, const Vec3 v_b_I_B,
         Vec3 om_B_R_B = om_B_I_B - R_B_to_R.transpose()*_target->get_om(t - _t0);
         ROMPC_UTILS::om_to_aadot(e_att, om_B_R_B, e_attrate);
 
-        if (_ctrl_type == CTRL_SURF) y << e_vel, p_b_r_R, e_attrate, e_att;     
-        else if (_ctrl_type == BODY_RATE) y << e_vel, p_b_r_R, e_att;
+        if (_ctrl_type == CTRL_SURF) {
+            _y << e_vel, p_b_r_R, e_attrate, e_att;
+            u_prev << T, ctrl_srf;
+        }
+        else if (_ctrl_type == BODY_RATE) {
+            _y << e_vel, p_b_r_R, e_att;
+            u_prev << T, e_attrate;
+        }
     }
     
+    // Compute current perturbation from equilibrium control
+    u_prev -= _u_eq;
+    
+    // Update ROMPC conroller
+    ROMPC::update_ctrl(t, u_prev);
     // Publish errors
     ros::Time time(t);
     geometry_msgs::PointStamped pos_error;
@@ -230,30 +247,17 @@ void ROMPC::update(const double t, const Vec3 p_b_i_I, const Vec3 v_b_I_B,
     attrate_error.header.stamp = time;
     Utils::eigen3d_to_point(e_attrate, attrate_error);
     _e_attrate_pub.publish(attrate_error);
-
-    // Compute current perturbation from equilibrium control
-    Vec4 u_prev;
-    if (_ctrl_type == CTRL_SURF) {
-        u_prev << T, ctrl_srf;
-    }
-    else if (_ctrl_type == BODY_RATE) {
-        u_prev << T, om_B_I_B;
-    }
-    u_prev -= _u_eq;
-    
-    // Update ROMPC conroller
-    ROMPC::update_ctrl(t, y, u_prev);
 }
 
 /**
     @brief Update the control based on new mesurements
 */
-void ROMPC::update_ctrl(const double t, const VecX y, const Vec4 u_prev) {
+void ROMPC::update_ctrl(const double t, const Vec4 u_prev) {
     double dt = t - _t; // time step since last update
     _t = t;
 
     // Update state estimate from previous step
-    _xhat += dt*(_A*_xhat + _B*u_prev + _L*(y - _C*_xhat));
+    _xhat += dt*(_A*_xhat + _B*u_prev + _L*(_y - _C*_xhat));
     _zhat = _H*_xhat;
     
     // Update simulated ROM TODO
@@ -266,9 +270,6 @@ void ROMPC::update_ctrl(const double t, const VecX y, const Vec4 u_prev) {
     // Control law
     _u = _ubar + _K*(_xhat - _xbar);
     
-    // Save current measurement
-    _y = y;
-
     // Broadcast control value on ROS topic
     ros::Time time(t);
     asl_fixedwing::FloatVecStamped nom_ctrl, ctrl;
@@ -299,8 +300,40 @@ void ROMPC::update_sim_rom(const double t) {
     @brief Get the current control with addition of equilibrium
     control term
 */
-VecX ROMPC::get_ctrl() {
-	return _u + _u_eq; // include equilibrium feedforward term
+VecX ROMPC::get_ctrl(double t) {
+    
+    // Need to convert from axis angle parameter rates to ang. vel.
+    if (_model_type == CFD && _ctrl_type == BODY_RATE) {
+        Vec4 u = _u + _u_eq;
+
+        // Get axis angle parameter rates
+        Vec3 e_attrate;
+        e_attrate << u(1), u(2), u(3);
+
+        // Get current axis angle for rotation from R to B
+        Vec3 e_att;
+        Rot::quat_to_axis(_q_R_to_B, e_att);
+
+        // Convert axis angle rates to angular velocity
+        Vec3 om_B_R_B;
+        ROMPC_UTILS::aadot_to_om(e_att, e_attrate, om_B_R_B);
+
+        // Compute ang. vel. of body w.r.t inertial
+        Mat3 R_B_to_R; // rotates vector from B coord to R coord
+        Rot::quat_to_R(_q_R_to_B, R_B_to_R);
+        Vec3 om_B_I_B = om_B_R_B + R_B_to_R.transpose()*_target->get_om(t - _t0);
+    
+        // Control is [T, p, q, r]
+        u(1) = om_B_I_B(0);
+        u(2) = om_B_I_B(1);
+        u(3) = om_B_I_B(2);
+        return u;
+    }
+    
+    // Otherwise the control is already in the correct form!
+    else {
+        return _u + _u_eq;
+    }    
 }
 
 VecX ROMPC::get_xhat() {

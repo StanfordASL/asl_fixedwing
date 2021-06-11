@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
         ctrl.update(t, pos, vel, euler, om, thrust, ctrl_srf);
         
         // Send control
-        plane.send_control(ctrl.get_ctrl());
+        plane.send_control(ctrl.get_ctrl(t));
 
 		// Add a check on ROMPC controller failure and
 		// have backup be a loiter or something using a change mode

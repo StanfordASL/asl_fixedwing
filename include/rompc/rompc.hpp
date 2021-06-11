@@ -28,7 +28,7 @@ public:
 	void update(const double t, const Vec3 p_b_i_I, const Vec3 v_b_I_B, 
                 const Vec3 euler, const Vec3 om_B_I_B, const double T,
                 const Vec3 ctrl_srf); 
-	VecX get_ctrl();
+	VecX get_ctrl(double t);
 	VecX get_xhat();
 	VecX get_xbar();
 
@@ -76,6 +76,7 @@ private:
 	double _t0; // initialization time (s)
     double _t; // last update time (s)
     bool _init = false;
+    Vec4 _q_R_to_B;
 
     unsigned _ctrl_type; // Control type
     unsigned _target_type; // Target type
@@ -92,7 +93,7 @@ private:
     ros::Publisher _zbar_pub;
     ros::Publisher _zhat_pub;
 
-    void update_ctrl(const double t, const VecX y, const Vec4 u_prev);
+    void update_ctrl(const double t, const Vec4 u_prev);
 	void update_sim_rom(const double t);
 };
 
