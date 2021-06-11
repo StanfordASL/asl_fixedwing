@@ -5,8 +5,8 @@
 
 #include <utils/utils.hpp>
 
-void Utils::point_to_eigen3d(const geometry_msgs::Point& p, Eigen::Vector3d& x) {
-    x(0) = p.x; x(1) = p.y; x(2) = p.z;
+void Utils::point_to_eigen3d(const geometry_msgs::PointStamped& p, Eigen::Vector3d& x) {
+    x(0) = p.point.x; x(1) = p.point.y; x(2) = p.point.z;
 }
 
 void Utils::quat_to_eigen4d(const geometry_msgs::Quaternion& q, Eigen::Vector4d& x) {
@@ -17,8 +17,8 @@ void Utils::vec3_to_eigen3d(const geometry_msgs::Vector3& v, Eigen::Vector3d& x)
     x(0) = v.x; x(1) = v.y; x(2) = v.z;
 }
 
-void Utils::eigen3d_to_point(const Eigen::Vector3d x, geometry_msgs::Point& p) {
-    p.x = x(0); p.y = x(1); p.z = x(2);
+void Utils::eigen3d_to_point(const Eigen::Vector3d x, geometry_msgs::PointStamped& p) {
+    p.point.x = x(0); p.point.y = x(1); p.point.z = x(2);
 }
 
 void Utils::eigen4d_to_quat(const Eigen::Vector4d& x, geometry_msgs::Quaternion& q) {
@@ -29,6 +29,6 @@ void Utils::eigen3d_to_vec3(const Eigen::Vector3d& x, geometry_msgs::Vector3& v)
     v.x = x(0); v.y = x(1); v.z = x(2);
 }
 
-void Utils::eigenxd_to_multarr(const Eigen::VectorXd& x, std_msgs::Float32MultiArray& a) {
-    a.data = std::vector<float>(x.data(), x.data() + x.size());
+void Utils::eigenxd_to_floatvec(const Eigen::VectorXd& x, asl_fixedwing::FloatVecStamped& v) {
+    v.data = std::vector<float>(x.data(), x.data() + x.size());
 }

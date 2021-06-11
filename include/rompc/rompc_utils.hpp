@@ -10,6 +10,7 @@
 
 using Vec3 = Eigen::Vector3d;
 using Vec4 = Eigen::Vector4d;
+using Mat3 = Eigen::Matrix3d;
 
 namespace ROMPC_UTILS {
 
@@ -86,6 +87,12 @@ protected:
     double _R; // turning radius
     Vec3 _p_c_i_I; // center of circle w.r.t inertial frame in I coord
 };
+
+void tangential_transf(const Vec3& aa, Mat3& T);
+
+void om_to_aadot(const Vec3& aa, const Vec3& om, Vec3& aadot);
+
+void aadot_to_om(const Vec3& aa, const Vec3& aadot, Vec3& om);
 
 }
 

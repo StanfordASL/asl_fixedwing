@@ -18,7 +18,9 @@ def reducedOrderRiccati(A, B, C, H, Wz, Wu):
     R = np.matmul(Wu.T, Wu)
     Qz = np.matmul(Wz, H)
     Qz = np.matmul(Qz.T, Qz) + .001*np.eye(A.shape[0])
-    Qw = 0.1*np.eye(A.shape[0])
+    
+    # Increase Qw to make measurements have more influence
+    Qw = 1*np.eye(A.shape[0])
 
     # Solve Riccati equations
     X = solve_continuous_are(A, B, Qz, R)
@@ -72,16 +74,18 @@ if __name__ == '__main__':
         # Simplify controls to be aircraft body rates
         A, B, C, H, x_eq, u_eq = simplify_control(A, B, x_eq, u_eq)
 
-        # z = [u, v, w, phi, th, psi, ex, ey, ez]
+        # z = [u, v, w, phi, th, psi, x_r, y_r, z_r]
         # u = [T, p, q, r]
-        Wz = np.diag([1, 1, 1, 1, 1, 1, 1, 1, 1])
-        Wu = np.diag([0.5, 1, 1, 1])
+        Wz = np.diag([1, 1, 1, np.deg2rad(1), np.deg2rad(1), np.deg2rad(1), 
+                      1, 1, 1])
+        Wu = np.diag([0.5, 100, 100, 100])
 
     elif sys.argv[2] == 'ctrl_surf':
-        # z = [u, v, w, p, q, r, phi, th, psi, ex, ey, ez]
+        # z = [u, v, w, p, q, r, phi, th, psi, x_r, y_r, z_r]
         # u = [T, a, e, r]
-        Wz = np.diag([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
-        Wu = np.diag([0.5, 1, 1, 1])
+        Wz = np.diag([1, 1, 1, np.deg2rad(5), np.deg2rad(5), np.deg2rad(5), 
+                      np.deg2rad(1), np.deg2rad(1), np.deg2rad(1), 1, 1, 1])
+        Wu = np.diag([0.5, np.deg2rad(1), np.deg2rad(1), np.deg2rad(1)])
 
     # Compute controller gains
     K, L = reducedOrderRiccati(A, B, C, H, Wz, Wu)

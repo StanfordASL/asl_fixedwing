@@ -207,3 +207,65 @@ Vec3 ROMPC_UTILS::STF::get_att_aa(double t) {
     Rot::quat_to_axis(_q_I_to_R, _aa_I_to_R);
     return _aa_I_to_R;
 }
+
+/**
+    @brief Computes operator T such that om = T(aa) * aa_dot which
+    transforms the rate of change of axis/angle representation of
+    rotation from A to B into the angular velocity of B w.r.t A written
+    in B coordinates.
+
+    @param[in] aa  axis angle representation aa = (th1, th2, th3)
+    @param[in] T   transformation operator matrix
+*/
+void ROMPC_UTILS::tangential_transf(const Vec3& aa, Mat3& T) {
+    double th2 = aa.squaredNorm(); // theta squared
+
+    double c1, c2, c3;
+    if (th2 < 5e-6) {
+        double th4 = th2 * th2;
+        c1 = 1.0  - th2/6   + th4/120;  // + O(th^6)
+        c2 = 1/2. - th2/24  + th4/720;  // + O(th^6)
+        c3 = 1/6. - th2/120 + th4/5040; // + O(th^6)
+    }
+    else {
+        double th = sqrt(th2);
+        c1 = sin(th)/th;
+        c2 = (1 - cos(th))/th2;
+        c3 = (th - sin(th))/(th * th2);
+    }
+    Mat3 skew_th = (Mat3() << 0.0, -aa(2), aa(1),
+                              aa(2), 0.0, -aa(0),
+                             -aa(1), aa(0), 0.0).finished();
+
+    T = c1*Mat3::Identity() - c2*skew_th + c3*(aa*aa.transpose());
+}
+
+/**
+    @brief Converts the angular velocity vector om for a frame B rotating w.r.t A
+    into the rate of change of the axis/angle parameters that represent the
+    rotation from A to B.
+
+    @param[in] aa     axis/angle repr. of rotation from A to B frames [rad]
+    @param[in] om     angular velocity of B w.r.t A [rad/s]
+    @param[in] aadot  time derivative of aa [rad/s]
+*/
+void ROMPC_UTILS::om_to_aadot(const Vec3& aa, const Vec3& om, Vec3& aadot) {
+    Mat3 T;
+    ROMPC_UTILS::tangential_transf(aa, T);
+    aadot = T.inverse() * om;
+}
+
+/**
+    @brief Given current axis/angle parameters for rotation from A to B and their
+    time derivatives, computes the angular velocity vector of B w.r.t A.
+
+    @param[in] aa     axis/angle repr. of rotation from A to B frames [rad]
+    @param[in] aadot  time derivative of aa [rad/s]
+    @param[in] om     angular velocity of B w.r.t A [rad/s]
+*/
+void ROMPC_UTILS::aadot_to_om(const Vec3& aa, const Vec3& aadot, Vec3& om) {
+    Mat3 T;
+    ROMPC_UTILS::tangential_transf(aa, T);
+    om = T * aadot;
+}
+

@@ -5,8 +5,7 @@ import rosbag
 def get_data_dir():
     return dirname(abspath(__file__))
 
-
-class posStream:
+class pointStream:
     def __init__(self):
         self.x = []
         self.y = []
@@ -17,48 +16,6 @@ class posStream:
         self.x.append(x)
         self.y.append(y)
         self.z.append(z)
-        self.t.append(t)
-
-
-class velStream:
-    def __init__(self):
-        self.u = []
-        self.v = []
-        self.w = []
-        self.t = []
-
-    def add_point(self, t, u, v, w):
-        self.u.append(u)
-        self.v.append(v)
-        self.w.append(w)
-        self.t.append(t)
-
-
-class eulerStream:
-    def __init__(self):
-        self.phi = []
-        self.th = []
-        self.psi = []
-        self.t = []
-
-    def add_point(self, t, phi, th, psi):
-        self.phi.append(phi)
-        self.th.append(th)
-        self.psi.append(psi)
-        self.t.append(t)
-
-
-class omStream:
-    def __init__(self):
-        self.p = []
-        self.q = []
-        self.r = []
-        self.t = []
-
-    def add_point(self, t, p, q, r):
-        self.p.append(p)
-        self.q.append(q)
-        self.r.append(r)
         self.t.append(t)
 
 
@@ -92,10 +49,10 @@ class planeData:
     A class to extract data from Plane topic messages
     """
     def __init__(self):
-        self.pos = posStream() # inertial pos x_i, y_i, z_i [m]
-        self.vel = velStream() # body frame vel u, v, w [m/s]
-        self.euler = eulerStream() # euler angle phi, th, psi [deg]
-        self.om = omStream() # body rate p, q, r [deg/s]
+        self.pos = pointStream() # inertial pos x_i, y_i, z_i [m]
+        self.vel = pointStream() # body frame vel u, v, w [m/s]
+        self.euler = pointStream() # euler angle phi, th, psi [deg]
+        self.om = pointStream() # body rate p, q, r [deg/s]
         self.act = ctrlStream() # thrust [N] and ctrl srf def [deg]
 
     def add_msg(self, topic, msg, t):
@@ -103,13 +60,13 @@ class planeData:
         Add a piece of data from a ROS message
         """
         if topic == 'position':
-            self.pos.add_point(t, msg.x, msg.y, msg.z)
+            self.pos.add_point(t, msg.point.x, msg.point.y, msg.point.z)
         elif topic == 'velocity':
-            self.vel.add_point(t, msg.x, msg.y, msg.z)
+            self.vel.add_point(t, msg.point.x, msg.point.y, msg.point.z)
         elif topic == 'euler':
-            self.euler.add_point(t, msg.x, msg.y, msg.z)
+            self.euler.add_point(t, msg.point.x, msg.point.y, msg.point.z)
         elif topic == 'bodyrate':
-            self.om.add_point(t, msg.x, msg.y, msg.z)
+            self.om.add_point(t, msg.point.x, msg.point.y, msg.point.z)
         elif topic == 'actuators':
             self.act.add_point(t, msg.controls)
 
@@ -117,33 +74,35 @@ class planeData:
 class rompcData:
     """
     A class to extract data from ROMPC topic messages
+
+    Note e_att is either euler angles or axis/angle param depending
+    on the type of model used.
+
+    Note e_attrate is either body rates p,q,r or axis/angle rates depending
+    on the type of model used.
     """
     def __init__(self):
-        self.e_pos = posStream() # pos error x_r, y_r, z_r [m]
-        self.e_vel = velStream() # body frame vel error [m/s]
-        self.e_euler = eulerStream() # euler angle error [deg]
+        self.e_pos = pointStream() # pos error x_r, y_r, z_r [m]
+        self.e_vel = pointStream() # body frame vel error [m/s]
+        self.e_att = pointStream() # attitude error [rad]
+        self.e_attrate = pointStream() # attitude rate error [rad/s]
         self.ubar = ctrlStream() # nominal control minus eq. control
         self.u = ctrlStream() # control minus eq. control
         self.zbar = zStream()
         self.zhat = zStream()
-        self.t0 = None
-        self.tf = None
 
     def add_msg(self, topic, msg, t):
         """
         Add a piece of data from a ROS message
         """
-        if self.t0 is None:
-            self.t0 = t
-            self.tf = t
-        if t > self.tf:
-            self.tf = t
         if topic == 'pos_error':
-            self.e_pos.add_point(t, msg.x, msg.y, msg.z)
+            self.e_pos.add_point(t, msg.point.x, msg.point.y, msg.point.z)
         elif topic == 'vel_error':
-            self.e_vel.add_point(t, msg.x, msg.y, msg.z)
-        elif topic == 'euler_error':
-            self.e_euler.add_point(t, msg.x, msg.y, msg.z)
+            self.e_vel.add_point(t, msg.point.x, msg.point.y, msg.point.z)
+        elif topic == 'att_error':
+            self.e_att.add_point(t, msg.point.x, msg.point.y, msg.point.z)
+        elif topic == 'attrate_error':
+            self.e_attrate.add_point(t, msg.point.x, msg.point.y, msg.point.z)
         elif topic == 'ubar':
             self.ubar.add_point(t, msg.data)
         elif topic == 'u':
@@ -167,18 +126,22 @@ class RosbagData:
         topics = ['/plane/position', '/plane/velocity', 
                   '/plane/euler', '/plane/bodyrate', 
                   '/plane/actuators', '/rompc/pos_error', 
-                  '/rompc/vel_error', '/rompc/euler_error', 
+                  '/rompc/vel_error', '/rompc/att_error',
+                  '/rompc/attrate_error',
                   '/rompc/ubar', '/rompc/u', 
                   '/rompc/zbar', '/rompc/zhat']
         for topic, msg, t in bag.read_messages(topics=topics):
-            self.add_msg(t, msg, topic)
-
-    def add_msg(self, t, msg, topic):
-        main, sub = topic.split('/')[1:3]
-        t = t.secs + t.nsecs/1e9
+            self.add_msg(msg, topic)
+    
+    def extract_time(self, msg):
+        t = msg.header.stamp.secs + msg.header.stamp.nsecs/1e9
         if self.t0 is None:
-            self.t0 = t;
-        t -= self.t0
+            self.t0 = t
+        return t - self.t0
+
+    def add_msg(self, msg, topic):
+        main, sub = topic.split('/')[1:3]
+        t = self.extract_time(msg)
         if main == 'plane':
             self.plane.add_msg(sub, msg, t)
         elif main == 'rompc':

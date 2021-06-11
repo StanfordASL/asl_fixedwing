@@ -1,4 +1,4 @@
-/**
+/*
 	@file rompc_node.cpp
 	ROS node for running ROMPC controller.
 
@@ -22,9 +22,9 @@ int main(int argc, char **argv) {
         ROS_INFO("Using default reset time of 5 seconds");
     }
 
-    double CTRL_RATE = 200.0; // Hz controller frequency
+    double CTRL_RATE = 100.0; // Hz controller frequency
     if (!nh.getParam("/rompc_node/CTRL_RATE", CTRL_RATE)) {
-        ROS_INFO("Using default control rate of 200 Hz");
+        ROS_INFO("Using default control rate of 100 Hz");
     }
 
     std::string CTRL_PATH; // model name, gazebo or skywalker
@@ -68,20 +68,20 @@ int main(int argc, char **argv) {
         ROS_INFO("TARGET_TYPE must be sgf, slf, or stf, got %s", target_type.c_str());
     }
 
-    std::string att_type; // attitude type, euler or axisangle
-    if (!nh.getParam("/rompc_node/ATTITUDE_TYPE", att_type)) {
-        ROS_INFO("Need to define attitude type {euler or axisangle}");
+    std::string model_type; // model type
+    if (!nh.getParam("/rompc_node/MODEL_TYPE", model_type)) {
+        ROS_INFO("Need to define model type {standard or cfd}");
         exit(1);
     }
-    unsigned ATT_TYPE;
-    if (att_type.compare("euler") == 0) {
-        ATT_TYPE = ROMPC::EULER;
+    unsigned MODEL_TYPE;
+    if (model_type.compare("standard") == 0) {
+        MODEL_TYPE = ROMPC::STANDARD;
     }
-    else if (att_type.compare("axisangle") == 0) {
-        ATT_TYPE = ROMPC::AA;
+    else if (model_type.compare("cfd") == 0) {
+        MODEL_TYPE = ROMPC::CFD;
     }
     else {
-        ROS_INFO("ATTITUDE_TYPE must be euler or axisangle, got %s", att_type.c_str());
+        ROS_INFO("MODEL_TYPE must be standard or cfd, got %s", model_type.c_str());
     }
 
     std::string MODEL; // model name, gazebo or skywalker
@@ -96,7 +96,7 @@ int main(int argc, char **argv) {
     Plane plane(nh, CTRL_TYPE, filepath);
 
 	// Initialize controller
-	ROMPC ctrl(nh, CTRL_TYPE, TARGET_TYPE, ATT_TYPE, filepath);
+	ROMPC ctrl(nh, CTRL_TYPE, TARGET_TYPE, MODEL_TYPE, filepath);
 
 	// Define rate for the node
 	ros::Rate rate(CTRL_RATE);
