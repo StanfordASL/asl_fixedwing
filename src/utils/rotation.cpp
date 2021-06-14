@@ -197,8 +197,19 @@ double Rot::deg_to_rad(double th) {
     return th*(M_PI/180.0);
 }
 
-double Rot::wrap_angle(double th) {
+/**
+    @brief Wraps angle th [rad] to range [0, 2pi]
+*/
+double Rot::wrap_to_2pi(double th) {
     th = fmod(th, 2.0*M_PI);
     if (th < 0) return th + 2.0 * M_PI;
     else return th;
 }
+
+/**
+    @brief Wraps angle th [rad] to range [-pi, pi]
+*/
+double Rot::wrap_to_pi(double th) {
+    return Rot::wrap_to_2pi(th + M_PI) - M_PI;
+}
+

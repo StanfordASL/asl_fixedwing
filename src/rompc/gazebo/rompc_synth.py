@@ -20,7 +20,7 @@ def reducedOrderRiccati(A, B, C, H, Wz, Wu):
     Qz = np.matmul(Qz.T, Qz) + .001*np.eye(A.shape[0])
     
     # Increase Qw to make measurements have more influence
-    Qw = 1*np.eye(A.shape[0])
+    Qw = 10*np.eye(A.shape[0])
 
     # Solve Riccati equations
     X = solve_continuous_are(A, B, Qz, R)
@@ -63,7 +63,7 @@ if __name__ == '__main__':
         th = x_eq[7] # pitch angle [rad]
         target = np.array([S, th])
     elif sys.argv[1] == 'stf':
-        R = 50 # m
+        R = 100 # m
         A, B, C, H, x_eq, u_eq = linearized_aircraft_stf(S, R)
         u, v, w = x_eq[0:3]
         p, q, r = x_eq[3:6]
@@ -76,9 +76,8 @@ if __name__ == '__main__':
 
         # z = [u, v, w, phi, th, psi, x_r, y_r, z_r]
         # u = [T, p, q, r]
-        Wz = np.diag([1, 1, 1, np.deg2rad(1), np.deg2rad(1), np.deg2rad(1), 
-                      1, 1, 1])
-        Wu = np.diag([0.5, 100, 100, 100])
+        Wz = np.diag([1, 1, 1, 0.1, 0.1, 0.1, 10, 10, 10])
+        Wu = np.diag([100, 1000, 1000, 1000])
 
     elif sys.argv[2] == 'ctrl_surf':
         # z = [u, v, w, p, q, r, phi, th, psi, x_r, y_r, z_r]

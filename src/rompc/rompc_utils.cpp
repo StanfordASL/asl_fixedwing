@@ -168,7 +168,7 @@ Vec3 ROMPC_UTILS::STF::get_pos(double t) {
     @param[in] t  time since initialization [s]
 */
 void ROMPC_UTILS::STF::compute_euler(double t) {
-    double psi = Rot::wrap_angle(_psi + t * _psi_dot);
+    double psi = Rot::wrap_to_2pi(_psi + t * _psi_dot);
     _euler << _phi, _th, psi;
 }
 

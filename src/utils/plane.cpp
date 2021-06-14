@@ -287,7 +287,7 @@ void Plane::act_cb(const mavros_msgs::ActuatorControl::ConstPtr& msg) {
     }
     else throw "Group mix of /mavros/target_actuator_control not recognized";
     
-    // Publish thrust and deflection angles (in degrees)
+    // Publish thrust and deflection angles
     mavros_msgs::ActuatorControl actuators;
     actuators.header.stamp = msg->header.stamp;
     actuators.group_mix = msg->group_mix;

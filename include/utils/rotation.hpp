@@ -34,7 +34,9 @@ double rad_to_deg(double th);
 
 double deg_to_rad(double th);
 
-double wrap_angle(double th);
+double wrap_to_2pi(double th);
+
+double wrap_to_pi(double th);
 }
 
 #endif // ROTATION_HPP

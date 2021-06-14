@@ -180,6 +180,7 @@ void ROMPC::update(const double t, const Vec3 p_b_i_I, const Vec3 v_b_I_B,
         
         // Compute attitude relative to target in Euler angles
         e_att = euler - _target->get_att_euler(t - _t0);
+        e_att(2) = Rot::wrap_to_pi(e_att(2)); // wrap yaw to [-pi, pi]
         
         // Compute body rate error 
         e_attrate = om_B_I_B - _target->get_om(t - _t0);

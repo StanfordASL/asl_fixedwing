@@ -25,7 +25,7 @@
     MODEL_TYPE: standard or cfd
     -->
 	<node pkg="asl_fixedwing" type="rompc_node" name="rompc_node" output="screen">
-		<param name="T_RESET" value="3.0" />
+		<param name="T_RESET" value="2.0" />
 		<param name="CTRL_RATE" value="100.0" />
         <param name="CTRL_PATH" value="$(find asl_fixedwing)/src/rompc/" />
         <param name="MODEL" value="gazebo" />
