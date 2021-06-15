@@ -25,9 +25,9 @@
 */
 ROMPC::ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type, 
              const unsigned target_type, const unsigned model_type, 
-             const std::string filepath)
+             const std::string filepath, const bool debug)
              : _ctrl_type(ctrl_type), _target_type(target_type), 
-             _model_type(model_type) {
+             _model_type(model_type), _debug(debug) {
     
     // Define control type
     if (_ctrl_type == CTRL_SURF) {
@@ -102,6 +102,10 @@ ROMPC::ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type,
                     ("rompc/zbar", 1);
     _zhat_pub = nh.advertise<asl_fixedwing::FloatVecStamped>
                     ("rompc/zhat", 1);
+    _y_pub = nh.advertise<asl_fixedwing::FloatVecStamped>
+                    ("rompc/y", 1);
+    _uprev_pub = nh.advertise<asl_fixedwing::FloatVecStamped>
+                    ("rompc/u_prev", 1);
 
     // Initialize other variables to zero
     int n = _A.rows();
@@ -227,6 +231,7 @@ void ROMPC::update(const double t, const Vec3 p_b_i_I, const Vec3 v_b_I_B,
     
     // Update ROMPC conroller
     ROMPC::update_ctrl(t, u_prev);
+    
     // Publish errors
     ros::Time time(t);
     geometry_msgs::PointStamped pos_error;
@@ -248,6 +253,15 @@ void ROMPC::update(const double t, const Vec3 p_b_i_I, const Vec3 v_b_I_B,
     attrate_error.header.stamp = time;
     Utils::eigen3d_to_point(e_attrate, attrate_error);
     _e_attrate_pub.publish(attrate_error);
+
+    if (_debug) {
+        asl_fixedwing::FloatVecStamped up, y;
+        up.header.stamp = y.header.stamp = time;
+        Utils::eigenxd_to_floatvec(u_prev, up);
+        Utils::eigenxd_to_floatvec(_y, y);
+        _uprev_pub.publish(up);
+        _y_pub.publish(y);
+    }
 }
 
 /**

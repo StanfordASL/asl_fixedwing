@@ -16,10 +16,10 @@ def reducedOrderRiccati(A, B, C, H, Wz, Wu):
     """
     R = np.matmul(Wu.T, Wu)
     Qz = np.matmul(Wz, H)
-    Qz = np.matmul(Qz.T, Qz) + .001*np.eye(A.shape[0])
+    Qz = np.matmul(Qz.T, Qz) + .00001*np.eye(A.shape[0])
     
     # Increase Qw to make measurements have more influence
-    Qw = 100*np.eye(A.shape[0])
+    Qw = 0.10000000*np.eye(A.shape[0])
 
     # Solve Riccati equations
     X = solve_continuous_are(A, B, Qz, R)
@@ -32,7 +32,7 @@ def reducedOrderRiccati(A, B, C, H, Wz, Wu):
     return K, L
 
 if __name__ == '__main__':
-    if len(sys.argv) <= 1 or sys.argv[1] not in ['sgf', 'slf', 'stf']
+    if len(sys.argv) <= 1 or sys.argv[1] not in ['sgf', 'slf', 'stf']:
         print('Correct usage: python rompc_synth.py {sgf, slf, stf}')
         sys.exit()
 
@@ -55,8 +55,8 @@ if __name__ == '__main__':
 
     # z = [xd_r, yd_r, zd_r, x_r, y_r, z_r, th1, th2, th3]
     # u = [T, th1d, th2d, th3d]
-    Wz = np.diag([1, 1, 1, 10, 10, 10, 0.1, 0.1, 0.1])
-    Wu = np.diag([100, 1000, 1000, 1000])
+    Wz = np.diag([0.1, 0.1, 0.1, 1, 1, 1, 0.1, 0.1, 0.1])
+    Wu = np.diag([100, 10000, 10000, 10000])
 
     # Compute controller gains
     K, L = reducedOrderRiccati(A, B, C, H, Wz, Wu)

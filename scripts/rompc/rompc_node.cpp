@@ -96,7 +96,8 @@ int main(int argc, char **argv) {
     Plane plane(nh, CTRL_TYPE, filepath);
 
 	// Initialize controller
-	ROMPC ctrl(nh, CTRL_TYPE, TARGET_TYPE, MODEL_TYPE, filepath);
+    bool debug = true;
+	ROMPC ctrl(nh, CTRL_TYPE, TARGET_TYPE, MODEL_TYPE, filepath, debug);
 
 	// Define rate for the node
 	ros::Rate rate(CTRL_RATE);

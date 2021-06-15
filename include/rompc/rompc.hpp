@@ -23,7 +23,7 @@ class ROMPC {
 public:
 	ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type, 
              const unsigned target_type, const unsigned model_type, 
-             const std::string filepath);
+             const std::string filepath, const bool debug = false);
 	void init(const double t0, const Vec3 p, const double psi);
 	void update(const double t, const Vec3 p_b_i_I, const Vec3 v_b_I_B, 
                 const Vec3 euler, const Vec3 om_B_I_B, const double T,
@@ -81,6 +81,7 @@ private:
     unsigned _ctrl_type; // Control type
     unsigned _target_type; // Target type
     unsigned _model_type; // Measurement type
+    bool _debug;
 
     std::unique_ptr<ROMPC_UTILS::Target> _target; // pointer to target object
     
@@ -92,6 +93,8 @@ private:
     ros::Publisher _u_pub;
     ros::Publisher _zbar_pub;
     ros::Publisher _zhat_pub;
+    ros::Publisher _uprev_pub;
+    ros::Publisher _y_pub;
 
     void update_ctrl(const double t, const Vec4 u_prev);
 	void update_sim_rom(const double t);
