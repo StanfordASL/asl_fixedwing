@@ -63,6 +63,8 @@ private:
 	MatX _B; // ...
 	MatX _C; // ...
 	MatX _H; // ... matrices
+    int _n; // state dimensior
+    MatX _AL; // A - LC
 
 	VecX _xbar; // nominal ROM state
 	VecX _ubar; // nominal ROM control

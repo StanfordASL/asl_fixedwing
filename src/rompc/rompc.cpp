@@ -84,6 +84,7 @@ ROMPC::ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type,
 	_K = Data::load_matrix(filepath + "/K.csv");
 	_L = Data::load_matrix(filepath + "/L.csv");
     _u_eq = Data::load_vector(filepath + "/u_eq.csv");
+    _AL = _A - _L*_C;
 	
     // ROS publishers
     _e_pos_pub = nh.advertise<geometry_msgs::PointStamped>
@@ -108,12 +109,12 @@ ROMPC::ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type,
                     ("rompc/u_prev", 1);
 
     // Initialize other variables to zero
-    int n = _A.rows();
+    _n = _A.rows();
     int m = _B.cols();
     int p = _C.rows();
-    _xbar.resize(n);
+    _xbar.resize(_n);
     _ubar.resize(m);
-    _xhat.resize(n);
+    _xhat.resize(_n);
     _u.resize(m);
     _y.resize(p);
     _xbar.setZero();
@@ -271,8 +272,10 @@ void ROMPC::update_ctrl(const double t, const Vec4 u_prev) {
     double dt = t - _t; // time step since last update
     _t = t;
 
-    // Update state estimate from previous step
-    _xhat += dt*(_A*_xhat + _B*u_prev + _L*(_y - _C*_xhat));
+    // Update state estimate from previous step using backward Euler
+    MatX M = MatX::Identity(_n, _n) - dt*(_AL);
+    _xhat = M.householderQr().solve(_xhat + dt*_B*u_prev + dt*_L*_y); // backward Euler
+    //_xhat += dt*(_A*_xhat + _B*u_prev + _L*(_y - _C*_xhat)); // forward Euler
     _zhat = _H*_xhat;
     
     // Update simulated ROM TODO
