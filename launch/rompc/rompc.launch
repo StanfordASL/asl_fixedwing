@@ -15,7 +15,9 @@
                       /rompc/ubar
                       /rompc/u
                       /rompc/zbar
-                      /rompc/zhat"
+                      /rompc/zhat
+                      /rompc/u_prev
+                      /rompc/y"
     />
 
     <!-- Start ROMPC node 
