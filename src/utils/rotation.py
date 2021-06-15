@@ -159,10 +159,10 @@ if __name__ == '__main__':
     q1 = axis_to_quat(aa1)
     q2 = axis_to_quat(aa2)
 
-    print quat_to_euler(compose_quats(q1, q2))
+    print(quat_to_euler(compose_quats(q1, q2)))
 
     aa = quat_to_axis(q1)
-    print np.linalg.norm(aa), aa/np.linalg.norm(aa)
+    print(np.linalg.norm(aa), aa/np.linalg.norm(aa))
 
     # # Testing inverse quaternion
     # a1 = np.array([1., 0., 0.])
@@ -174,13 +174,13 @@ if __name__ == '__main__':
 
     # Testing euler to quat
     euler = np.array([np.pi/4, np.pi/6, np.pi/5])
-    print euler
-    print quat_to_euler(euler_to_quat(*euler))
+    print(euler)
+    print(quat_to_euler(euler_to_quat(*euler)))
 
     # Testing R to euler failure
     phi = -np.pi/4
     th = -np.pi/2
     psi = 0.0
     R = euler_to_R(phi, th, psi)
-    print phi, th, psi
-    print R_to_euler(R)
+    print(phi, th, psi)
+    print(R_to_euler(R))

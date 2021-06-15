@@ -135,7 +135,7 @@ class RosbagData:
                   '/rompc/vel_error', '/rompc/att_error',
                   '/rompc/attrate_error',
                   '/rompc/ubar', '/rompc/u', 
-                  '/rompc/zbar', '/rompc/zhat'
+                  '/rompc/zbar', '/rompc/zhat',
                   '/rompc/u_prev', '/rompc/y']
         for topic, msg, t in bag.read_messages(topics=topics):
             self.add_msg(msg, topic)
