@@ -90,6 +90,8 @@ class rompcData:
         self.u = ctrlStream() # control minus eq. control
         self.zbar = zStream()
         self.zhat = zStream()
+        self.u_prev = ctrlStream() # Control used in state estimator
+        self.y = zStream()
 
     def add_msg(self, topic, msg, t):
         """
@@ -111,6 +113,10 @@ class rompcData:
             self.zbar.add_point(t, msg.data)
         elif topic == 'zhat':
             self.zhat.add_point(t, msg.data)
+        elif topic == 'u_prev':
+            self.u_prev.add_point(t, msg.data)
+        elif topic == 'y':
+            self.y.add_point(t, msg.data)
 
 
 class RosbagData:
@@ -129,7 +135,8 @@ class RosbagData:
                   '/rompc/vel_error', '/rompc/att_error',
                   '/rompc/attrate_error',
                   '/rompc/ubar', '/rompc/u', 
-                  '/rompc/zbar', '/rompc/zhat']
+                  '/rompc/zbar', '/rompc/zhat'
+                  '/rompc/u_prev', '/rompc/y']
         for topic, msg, t in bag.read_messages(topics=topics):
             self.add_msg(msg, topic)
     
