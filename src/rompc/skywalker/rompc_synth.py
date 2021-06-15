@@ -19,7 +19,7 @@ def reducedOrderRiccati(A, B, C, H, Wz, Wu):
     Qz = np.matmul(Qz.T, Qz) + .00001*np.eye(A.shape[0])
     
     # Increase Qw to make measurements have more influence
-    Qw = 0.10000000*np.eye(A.shape[0])
+    Qw = 10*np.eye(A.shape[0])
 
     # Solve Riccati equations
     X = solve_continuous_are(A, B, Qz, R)
@@ -56,7 +56,7 @@ if __name__ == '__main__':
     # z = [xd_r, yd_r, zd_r, x_r, y_r, z_r, th1, th2, th3]
     # u = [T, th1d, th2d, th3d]
     Wz = np.diag([0.1, 0.1, 0.1, 1, 1, 1, 0.1, 0.1, 0.1])
-    Wu = np.diag([100, 10000, 10000, 10000])
+    Wu = np.diag([100, 1000, 1000, 1000])
 
     # Compute controller gains
     K, L = reducedOrderRiccati(A, B, C, H, Wz, Wu)
