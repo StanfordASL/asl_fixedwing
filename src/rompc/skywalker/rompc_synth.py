@@ -56,7 +56,7 @@ if __name__ == '__main__':
     # z = [xd_r, yd_r, zd_r, x_r, y_r, z_r, th1, th2, th3]
     # u = [T, th1d, th2d, th3d]
     Wz = np.diag([0.1, 0.1, 0.1, 1, 1, 1, 0.1, 0.1, 0.1])
-    Wu = np.diag([100, 1000, 1000, 1000])
+    Wu = np.diag([1, 100, 100, 100])
 
     # Compute controller gains
     K, L = reducedOrderRiccati(A, B, C, H, Wz, Wu)

@@ -76,8 +76,8 @@ if __name__ == '__main__':
 
         # z = [u, v, w, phi, th, psi, x_r, y_r, z_r]
         # u = [T, p, q, r]
-        Wz = np.diag([1, 1, 1, 0.1, 0.1, 0.1, 10, 10, 10])
-        Wu = np.diag([100, 1000, 1000, 1000])
+        Wz = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 10, 10, 10])
+        Wu = np.diag([10, 1000, 1000, 1000])
 
     elif sys.argv[2] == 'ctrl_surf':
         # z = [u, v, w, p, q, r, phi, th, psi, x_r, y_r, z_r]

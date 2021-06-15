@@ -21,7 +21,7 @@
     />
 
     <!-- Start ROMPC node 
-    MODEL: gazbeo or skywalker
+    MODEL: gazebo or skywalker
     CTRL_TYPE: body_rate or ctrl_surf
     TARGET_TYPE: sgf, slf, or stf
     MODEL_TYPE: standard or cfd
