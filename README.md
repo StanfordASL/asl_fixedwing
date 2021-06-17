@@ -15,3 +15,11 @@ git checkout -b asl-v3.2.0
 mkdir bin
 make
 ```
+
+Then update the CMakeLists.txt file to make sure it has the line:
+```
+SET(QPOASES_INCLUDE_DIRS <path-to-install-dir>)
+SET(QPOASES_LIBRARIES <path-to-install-dir>/bin/libqpOASES.a
+					${LAPACK_LIBRARIES}
+					${BLAS_LIBRARIES})
+```
