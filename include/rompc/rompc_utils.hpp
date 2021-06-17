@@ -7,10 +7,15 @@
 */
 
 #include <Eigen/Dense>
+#include <qpOASES.hpp>
 
 using Vec3 = Eigen::Vector3d;
 using Vec4 = Eigen::Vector4d;
 using Mat3 = Eigen::Matrix3d;
+using VecX = Eigen::VectorXd;
+using MatX = Eigen::MatrixXd;
+using RowMajMat = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, 
+                      Eigen::RowMajor>;
 
 namespace ROMPC_UTILS {
 
@@ -86,6 +91,34 @@ protected:
     double _psi_dot; // yaw rate
     double _R; // turning radius
     Vec3 _p_c_i_I; // center of circle w.r.t inertial frame in I coord
+};
+
+/**
+    @class OCP
+   
+    @brief ROMPC Optimal control problem with only control
+    constraints.
+*/
+class OCP {
+public:
+    OCP(const std::string filepath);
+    bool solve(const VecX x0, Vec4& uopt, double& cputime)
+
+protected:
+    void eigen_to_qpoases(const MatX& M, qpOASES::real_t* m);
+    void set_x0(const VecX x0);
+
+    int _nV; // number of vars in OCP
+    int _nC; // number of constraints
+    int _n; // state dimension
+    MatX _G; // J = 1/2 U^T F U + x0^T G U
+    qpOASES::real_t _F[nV*nV];
+    qpOASES::real_t _E[nC*nV]; // s.t. E U <= ubE
+    qpOASES::real_t _ubE[nC];
+    qpOASES::real_t _g[nV]; // g = x0^T * G
+    qpOASES::real_t _U[nV]; // solution vector
+
+    qpOASES::QProblem _ocp; // ocp object
 };
 
 void tangential_transf(const Vec3& aa, Mat3& T);

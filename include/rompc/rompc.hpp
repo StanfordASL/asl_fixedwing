@@ -66,6 +66,8 @@ private:
     int _n; // state dimensior
     MatX _AL; // A - LC
 
+    ROMPC_UTILS::OCP _ocp; // optimal control problem
+
 	VecX _xbar; // nominal ROM state
 	VecX _ubar; // nominal ROM control
 	VecX _xhat; // ROM state estimate

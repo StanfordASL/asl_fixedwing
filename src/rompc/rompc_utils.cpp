@@ -208,6 +208,127 @@ Vec3 ROMPC_UTILS::STF::get_att_aa(double t) {
     return _aa_I_to_R;
 }
 
+/** 
+    @brief Constructor, initialize OCP object
+
+    @param[in] filepath  path to where the QP matrices are
+    @param[in] m         dimension of control vector
+*/ 
+ROMPC_UTILS::OCP::OCP(const std::string filepath) {  
+    MatX F = Data::load_matrix(filepath + "/F.csv");
+    _G = Data::load_matrix(filepath + "/G.csv");
+    MatX E = Data::load_matrix(filepath + "/E.csv");
+    VecX ubE = Data::load_matrix(filepath + "/ub.csv");
+
+    _nV = E.cols();
+    _nC = E.rows();
+    _n = G.rows();
+
+    // Initialize QP problem
+    _ocp = qpOASES::QProblem(nV, nC);
+    qpOASES::Options options;
+    options.setToMPC();
+    options.printLevel = qpOASES::PL_NONE;
+    _ocp.setOptions(options);
+
+    // Define constant problem data structures
+    eigen_to_qpoases(F, _F);
+    eigen_to_qpoases(E, _E);
+    eigen_to_qpoases(ubE, _ubE);
+
+    Eigen::VectorXd x0;
+    x0.resize(n);
+    x0.setZero();
+    set_x0(x0);
+
+    qpOASES::int_t nWSR = 1000;
+    qpOASES::real_t cputime = 1;
+    qpOASES::returnValue st = _ocp.init(_F, _g, _E, nullptr, nullptr, 
+                              nullptr, _ubE, nWSR, &cputime);
+
+    if (st == qpOASES::SUCCESSFUL_RETURN) {
+        std::cout << "Solve time: " << 1000*cputime << " ms" << std::endl;
+    }
+    else if (st == qpOASES::RET_MAX_NWSR_REACHED) {
+        std::cout << "Failure: Max iterations reached" << std::endl;
+    }
+    else {
+        std::cout << "Failure" << std::endl;
+    }
+
+
+    // Sol should be -2.3628, 0.0392, 0.0348, 0.0301 based on Matlab
+    x0(n-6) = 10.0;
+    x0(n-5) = -5.0;
+    set_x0(x0)
+   
+    nWSR = 1000;
+    cputime = 0.01;
+    st = _ocp.hotstart(_g, nullptr, nullptr, 
+                      nullptr, _ubE, nWSR, &cputime);
+
+    if (st == qpOASES::SUCCESSFUL_RETURN) {
+        std::cout << "Solve time: " << 1000*cputime << " ms" << std::endl;
+    }
+    else if (st == qpOASES::RET_MAX_NWSR_REACHED) {
+        std::cout << "Failure: Max iterations reached" << std::endl;
+    }
+    else {
+        std::cout << "Failure" << std::endl;
+    }
+
+    _ocp.getPrimalSolution(_U);
+    printf("\nu0 = [ %e, %e , %e, %e]\n",
+                _U[0], _U[1], _U[2], _U[3]);
+}
+
+/**
+    @brief Converts a Eigen::MatrixXd matrix into an array
+    assuming row major ordering used by qpOASES
+*/
+void ROMPC_UTILS::OCP::eigen_to_qpoases(const MatX& M, qpOASES::real_t* m) {
+    RowMajMat::Map(m, M.rows(), M.cols()) = M;
+}
+
+/**
+    @brief Converts a Eigen::MatrixXd matrix into an array
+    assuming row major ordering used by qpOASES
+*/
+void ROMPC_UTILS::OCP::set_x0(const VecX x0) {
+    eigen_to_qpoases(x0.transpose()*_G, _g);
+}
+
+/**
+    @brief Converts a Eigen::MatrixXd matrix into an array
+    assuming row major ordering used by qpOASES
+
+    @param[in] x0        Initial condition
+    @param[in] uopt      Writes u_0* to this vector
+    @param[in] cputime   
+
+    @param[out] success  boolean if solved successfully
+*/
+bool ROMPC_UTILS::OCP::solve(const VecX x0, Vec4& uopt, double& cputime) {
+    set_x0(x0); // Set the new initial condition
+
+    qpOASES::int_t nWSR = 1000;
+    qpOASES::real_t comptime = 0.01;
+    qpOASES::returnValue st = _ocp.hotstart(_g, nullptr, nullptr, 
+                                        nullptr, _ubE, nWSR, &comptime);
+
+    if (st == qpOASES::SUCCESSFUL_RETURN) {
+        _ocp.getPrimalSolution(_U);
+        uopt << _U[0], _U[1], _U[2], _U[3];
+        cputime = comptime;
+        return true;
+    }
+    else {
+        uopt.setZero();
+        cputime = -1.0;
+        return false;
+    }
+}
+
 /**
     @brief Computes operator T such that om = T(aa) * aa_dot which
     transforms the rate of change of axis/angle representation of

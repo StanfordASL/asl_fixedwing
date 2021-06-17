@@ -85,6 +85,9 @@ ROMPC::ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type,
 	_L = Data::load_matrix(filepath + "/L.csv");
     _u_eq = Data::load_vector(filepath + "/u_eq.csv");
     _AL = _A - _L*_C;
+
+    // Initialize optimal control problem
+    _ocp = ROMPC_UTILS::OCP(filepath);
 	
     // ROS publishers
     _e_pos_pub = nh.advertise<geometry_msgs::PointStamped>

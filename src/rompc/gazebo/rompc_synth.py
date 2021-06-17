@@ -9,6 +9,24 @@ from os import mkdir
 import numpy as np
 from scipy.linalg import solve_continuous_are
 
+def cost_weights(ctrl_type):
+    if ctrl_type == 'ctrl_surf':
+        # z = [u, v, w, p, q, r, phi, th, psi, x_r, y_r, z_r]
+        # u = [T, a, e, r]
+        Wz = np.diag([1, 1, 1, np.deg2rad(5), np.deg2rad(5), np.deg2rad(5), 
+                      np.deg2rad(1), np.deg2rad(1), np.deg2rad(1), 1, 1, 1])
+        Wu = np.diag([0.5, np.deg2rad(1), np.deg2rad(1), np.deg2rad(1)])
+    elif ctrl_type == 'body_rate':
+        # z = [u, v, w, phi, th, psi, x_r, y_r, z_r]
+        # u = [T, p, q, r]
+        Wz = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 10, 10, 10])
+        Wu = np.diag([10, 1000, 1000, 1000])
+    else:
+        print('Control type %s not known.' % ctrl_type)
+        sys.exit()
+    
+    return Wz, Wu
+
 def reducedOrderRiccati(A, B, C, H, Wz, Wu):
     """
     Compute controller gains by solving Riccati equations
@@ -74,19 +92,8 @@ if __name__ == '__main__':
         # Simplify controls to be aircraft body rates
         A, B, C, H, x_eq, u_eq = simplify_control(A, B, x_eq, u_eq)
 
-        # z = [u, v, w, phi, th, psi, x_r, y_r, z_r]
-        # u = [T, p, q, r]
-        Wz = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 10, 10, 10])
-        Wu = np.diag([10, 1000, 1000, 1000])
-
-    elif sys.argv[2] == 'ctrl_surf':
-        # z = [u, v, w, p, q, r, phi, th, psi, x_r, y_r, z_r]
-        # u = [T, a, e, r]
-        Wz = np.diag([1, 1, 1, np.deg2rad(5), np.deg2rad(5), np.deg2rad(5), 
-                      np.deg2rad(1), np.deg2rad(1), np.deg2rad(1), 1, 1, 1])
-        Wu = np.diag([0.5, np.deg2rad(1), np.deg2rad(1), np.deg2rad(1)])
-
     # Compute controller gains
+    Wz, Wu = cost_weights(sys.argv[2])
     K, L = reducedOrderRiccati(A, B, C, H, Wz, Wu)
 
     # Save files to be loaded by ROMPC controller

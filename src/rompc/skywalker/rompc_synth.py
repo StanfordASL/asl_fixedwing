@@ -9,6 +9,21 @@ from os import mkdir
 import numpy as np
 from scipy.linalg import solve_continuous_are
 
+def cost_weights(ctrl_type):
+    if ctrl_type == 'ctrl_surf':
+        print('ctrl_surf not implemented for skywalker')
+        sys.exit()
+    elif ctrl_type == 'body_rate':
+        # z = [xd_r, yd_r, zd_r, x_r, y_r, z_r, th1, th2, th3]
+        # u = [T, th1d, th2d, th3d]
+        Wz = np.diag([0.1, 0.1, 0.1, 1, 1, 1, 0.1, 0.1, 0.1])
+        Wu = np.diag([1, 100, 100, 100])
+    else:
+        print('Control type %s not known.' % ctrl_type)
+        sys.exit()
+    
+    return Wz, Wu
+
 def reducedOrderRiccati(A, B, C, H, Wz, Wu):
     """
     Compute controller gains by solving Riccati equations
@@ -53,12 +68,8 @@ if __name__ == '__main__':
     C = np.loadtxt(join(savepath, "C.csv"), delimiter=",")
     H = np.loadtxt(join(savepath, "H.csv"), delimiter=",")
 
-    # z = [xd_r, yd_r, zd_r, x_r, y_r, z_r, th1, th2, th3]
-    # u = [T, th1d, th2d, th3d]
-    Wz = np.diag([0.1, 0.1, 0.1, 1, 1, 1, 0.1, 0.1, 0.1])
-    Wu = np.diag([1, 100, 100, 100])
-
     # Compute controller gains
+    Wz, Wu = cost_weights('body_rate')
     K, L = reducedOrderRiccati(A, B, C, H, Wz, Wu)
     np.savetxt(join(savepath, "K.csv"), K, delimiter=",")
     np.savetxt(join(savepath, "L.csv"), L, delimiter=",")
