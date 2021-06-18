@@ -25,9 +25,9 @@
 */
 ROMPC::ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type, 
              const unsigned target_type, const unsigned model_type, 
-             const std::string filepath, const bool debug)
+             const std::string filepath, const double tmax, const bool debug)
              : _ctrl_type(ctrl_type), _target_type(target_type), 
-             _model_type(model_type), _debug(debug) {
+             _model_type(model_type), _debug(debug), _ocp(filepath, tmax) {
     
     // Define control type
     if (_ctrl_type == CTRL_SURF) {
@@ -44,13 +44,13 @@ ROMPC::ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type,
     if (_target_type == SGF) {
         // Load parameters p = [S, gamma, th]
         VecX p = Data::load_vector(filepath + "/target.csv");
-        _target = std::unique_ptr<ROMPC_UTILS::Target>(new ROMPC_UTILS::SGF(p(0), p(1), p(2)));
+        _target = TargetPtr(new ROMPC_UTILS::SGF(p(0), p(1), p(2)));
         ROS_INFO("Target is STEADY GLIDESLOPE FLIGHT");
     }
     else if (_target_type == SLF) {
         // Load paramters p = [S, th]
         VecX p = Data::load_vector(filepath + "/target.csv");
-        _target = std::unique_ptr<ROMPC_UTILS::Target>(new ROMPC_UTILS::SGF(p(0), 0.0, p(1)));
+        _target = TargetPtr(new ROMPC_UTILS::SGF(p(0), 0.0, p(1)));
         ROS_INFO("Target is STEADY LEVEL FLIGHT");
     }
     else if (_target_type == STF) {
@@ -58,7 +58,7 @@ ROMPC::ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type,
         VecX p = Data::load_vector(filepath + "/target.csv");
         Vec3 v(p(0), p(1), p(2));
         Vec3 om(p(3), p(4), p(5));
-        _target = std::unique_ptr<ROMPC_UTILS::Target>(new ROMPC_UTILS::STF(v, om, p(6), p(7), p(8)));
+        _target = TargetPtr(new ROMPC_UTILS::STF(v, om, p(6), p(7), p(8)));
         ROS_INFO("Target is STEADY TURNING FLIGHT");
     }
     else {
@@ -75,6 +75,15 @@ ROMPC::ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type,
     else {
         throw std::runtime_error("Model must be {STANDARD, CFD}");
     }
+
+    // Check OCP initialization success
+    ROS_INFO("QP solver time limit set to %.1f ms", 1000.0*tmax);
+    if (_ocp.success()) {
+        ROS_INFO("QP initial solve SUCCESS in %.1f ms", 1000.0*_ocp.solve_time());
+    }
+    else {
+        ROS_INFO("QP initial solve FAILED"); 
+    }
     
     // Load controller parameters from file
 	_A = Data::load_matrix(filepath + "/A.csv");
@@ -86,9 +95,6 @@ ROMPC::ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type,
     _u_eq = Data::load_vector(filepath + "/u_eq.csv");
     _AL = _A - _L*_C;
 
-    // Initialize optimal control problem
-    _ocp = ROMPC_UTILS::OCP(filepath);
-	
     // ROS publishers
     _e_pos_pub = nh.advertise<geometry_msgs::PointStamped>
                     ("rompc/pos_error", 1);

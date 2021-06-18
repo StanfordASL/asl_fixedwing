@@ -6,6 +6,8 @@
 	Header file defining useful utilities for ROMPC controller.
 */
 
+#include <memory>
+#include <iostream>
 #include <Eigen/Dense>
 #include <qpOASES.hpp>
 
@@ -16,6 +18,7 @@ using VecX = Eigen::VectorXd;
 using MatX = Eigen::MatrixXd;
 using RowMajMat = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, 
                       Eigen::RowMajor>;
+using ArrPtr = std::unique_ptr<qpOASES::real_t[]>;
 
 namespace ROMPC_UTILS {
 
@@ -101,24 +104,30 @@ protected:
 */
 class OCP {
 public:
-    OCP(const std::string filepath);
-    bool solve(const VecX x0, Vec4& uopt, double& cputime)
+    OCP(const std::string filepath, const double tmax);
+    void solve(const VecX x0, Vec4& uopt);
+    bool success();
+    double solve_time();
 
-protected:
-    void eigen_to_qpoases(const MatX& M, qpOASES::real_t* m);
+private:
+    void eigen_to_qpoases(const MatX& M, ArrPtr& m);
     void set_x0(const VecX x0);
 
     int _nV; // number of vars in OCP
     int _nC; // number of constraints
     int _n; // state dimension
     MatX _G; // J = 1/2 U^T F U + x0^T G U
-    qpOASES::real_t _F[nV*nV];
-    qpOASES::real_t _E[nC*nV]; // s.t. E U <= ubE
-    qpOASES::real_t _ubE[nC];
-    qpOASES::real_t _g[nV]; // g = x0^T * G
-    qpOASES::real_t _U[nV]; // solution vector
+    
+    ArrPtr _F;
+    ArrPtr _E; // s.t. E U <= ubE
+    ArrPtr _ubE;
+    ArrPtr _g; // g = x0^T * G
+    ArrPtr _U; // solution vector U = [u0, ..., u_N-1]
 
     qpOASES::QProblem _ocp; // ocp object
+    double _tmax; // max amount of time to solve QP
+    bool _success;
+    double _solve_time;
 };
 
 void tangential_transf(const Vec3& aa, Mat3& T);

@@ -92,12 +92,17 @@ int main(int argc, char **argv) {
     std::string filepath = CTRL_PATH + MODEL + "/" + target_type;
     ROS_INFO("Loading controller parameters from %s", filepath.c_str());
 
+    double QP_TMAX = 0.01; // time limit on solving QP
+    if (!nh.getParam("/rompc_node/QP_TMAX", QP_TMAX)) {
+        ROS_INFO("Using default QP max solve time of 0.01 seconds");
+    }
+
     // Initialize Plane object
     Plane plane(nh, CTRL_TYPE, filepath);
 
 	// Initialize controller
     bool debug = true;
-	ROMPC ctrl(nh, CTRL_TYPE, TARGET_TYPE, MODEL_TYPE, filepath, debug);
+	ROMPC ctrl(nh, CTRL_TYPE, TARGET_TYPE, MODEL_TYPE, filepath, QP_TMAX, debug);
 
 	// Define rate for the node
 	ros::Rate rate(CTRL_RATE);
