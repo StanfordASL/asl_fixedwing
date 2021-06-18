@@ -11,7 +11,7 @@ Use qpOASES as the QP solver. Note we are using the asl-v3.2.0 branch instead of
 ```
 git clone https://github.com/jlorenze/qpOASES.git
 cd <install-dir>
-git checkout -b asl-v3.2.0
+git checkout asl-v3.2.0
 mkdir bin
 make
 ```
