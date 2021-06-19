@@ -13,6 +13,7 @@
 
 #include <string>
 #include <geometry_msgs/Point.h>
+#include <std_msgs/Float32.h>
 
 /**
     @brief Constructor which loads model and control parameters from file
@@ -77,7 +78,9 @@ ROMPC::ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type,
     }
 
     // Check OCP initialization success
+    _qp_dt = _ocp.get_dt();
     ROS_INFO("QP solver time limit set to %.1f ms", 1000.0*tmax);
+    ROS_INFO("MPC problem has dt = %.1f ms and N = %d", 1000.0*_qp_dt, _ocp.get_N());
     if (_ocp.success()) {
         ROS_INFO("QP initial solve SUCCESS in %.1f ms", 1000.0*_ocp.solve_time());
     }
@@ -112,10 +115,14 @@ ROMPC::ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type,
                     ("rompc/zbar", 1);
     _zhat_pub = nh.advertise<asl_fixedwing::FloatVecStamped>
                     ("rompc/zhat", 1);
-    _y_pub = nh.advertise<asl_fixedwing::FloatVecStamped>
-                    ("rompc/y", 1);
-    _uprev_pub = nh.advertise<asl_fixedwing::FloatVecStamped>
-                    ("rompc/u_prev", 1);
+    if (_debug) {
+        _y_pub = nh.advertise<asl_fixedwing::FloatVecStamped>
+                        ("rompc/y", 1);
+        _uprev_pub = nh.advertise<asl_fixedwing::FloatVecStamped>
+                        ("rompc/u_prev", 1);
+        _qptime_pub = nh.advertise<std_msgs::Float32>
+                        ("rompc/qp_solve_time", 1);
+    }
 
     // Initialize other variables to zero
     _n = _A.rows();
@@ -134,6 +141,7 @@ ROMPC::ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type,
     _zhat.setZero();
     _zbar.setZero();
     _q_R_to_B.setZero();
+    _t0 = _t = _t_qp = 0.0;
 }
 
 /**
@@ -152,6 +160,14 @@ void ROMPC::init(const double t0, const Vec3 p, const double psi) {
     
     _init = true;
     _t = t0;
+    _t_qp = t0 - _qp_dt;
+}
+
+/**
+    @brief Start the ROMPC scheme
+*/
+void ROMPC::start() {
+    _started = true;
 }
 
 /**
@@ -287,15 +303,29 @@ void ROMPC::update_ctrl(const double t, const Vec4 u_prev) {
     //_xhat += dt*(_A*_xhat + _B*u_prev + _L*(_y - _C*_xhat)); // forward Euler
     _zhat = _H*_xhat;
     
-    // Update simulated ROM TODO
-    _xbar = _xbar;
+    // Update simulated ROM
+    if (!_started) {
+        _ubar = u_prev - _K*(_xhat - _xbar);
+    }
+    else if (t >= _t_qp) {
+        _t_qp = t + _qp_dt;
+        _ocp.solve(_xbar, _ubar);
+        if (!_ocp.success()) ROS_INFO("QP solver failed or ran out of time");
+        
+        if (_debug) {
+            std_msgs::Float32 time;
+            time.data = 1000.0*_ocp.solve_time();
+            _qptime_pub.publish(time);
+        }
+    }
+    
+    M = MatX::Identity(_n, _n) - dt*(_A);
+    _xbar = M.householderQr().solve(_xbar + dt*_B*_ubar); // backward Euler
     _zbar = _H*_xbar;
     
-    // Get simulated ROM state and control at time t
-    ROMPC::update_sim_rom(t);
-    
     // Control law
-    _u = _ubar + _K*(_xhat - _xbar);
+    if (!_started) _u = _K*_xhat;
+    else _u = _ubar + _K*(_xhat - _xbar);
     
     // Broadcast control value on ROS topic
     ros::Time time(t);
@@ -313,14 +343,6 @@ void ROMPC::update_ctrl(const double t, const Vec4 u_prev) {
     Utils::eigenxd_to_floatvec(_zbar, zbar);
     _zbar_pub.publish(zbar);
     _zhat_pub.publish(zhat);
-}
-
-/**
-    @brief Update the simulated ROM state and control TODO
-*/
-void ROMPC::update_sim_rom(const double t) {
-	_ubar.setZero();
-	_xbar.setZero();
 }
 
 /**
@@ -371,3 +393,6 @@ VecX ROMPC::get_xbar() {
     return _xbar;
 }
 
+bool ROMPC::started() {
+    return _started;
+}

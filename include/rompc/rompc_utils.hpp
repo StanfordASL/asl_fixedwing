@@ -108,6 +108,8 @@ public:
     void solve(const VecX x0, Vec4& uopt);
     bool success();
     double solve_time();
+    double get_dt();
+    int get_N();
 
 private:
     void eigen_to_qpoases(const MatX& M, ArrPtr& m);
@@ -123,6 +125,9 @@ private:
     ArrPtr _ubE;
     ArrPtr _g; // g = x0^T * G
     ArrPtr _U; // solution vector U = [u0, ..., u_N-1]
+
+    double _dt; // discretization time of system
+    int _N; // horizon 
 
     qpOASES::QProblem _ocp; // ocp object
     double _tmax; // max amount of time to solve QP

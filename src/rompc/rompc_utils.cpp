@@ -221,10 +221,13 @@ ROMPC_UTILS::OCP::OCP(const std::string filepath, const double tmax)
     _G = Data::load_matrix(filepath + "/G.csv");
     MatX E = Data::load_matrix(filepath + "/E.csv");
     VecX ubE = Data::load_matrix(filepath + "/ub.csv");
-
+    VecX params = Data::load_matrix(filepath + "/params.csv");
+    
     _nV = E.cols();
     _nC = E.rows();
     _n = _G.rows();
+    _dt = params(1); // discretization time in seconds
+    _N = params(0); // horizon steps
 
     // Initialize QP problem
     _ocp = qpOASES::QProblem(_nV, _nC);
@@ -282,7 +285,6 @@ void ROMPC_UTILS::OCP::set_x0(const VecX x0) {
 
     @param[in] x0        Initial condition
     @param[in] uopt      Writes u_0* to this vector
-    @param[in] cputime   
 
     @param[out] success  boolean if solved successfully
 */
@@ -319,6 +321,14 @@ bool ROMPC_UTILS::OCP::success() {
 */
 double ROMPC_UTILS::OCP::solve_time() {
     return _solve_time;
+}
+
+double ROMPC_UTILS::OCP::get_dt() {
+    return _dt;
+}
+
+int ROMPC_UTILS::OCP::get_N() {
+    return _N;
 }
 
 /**

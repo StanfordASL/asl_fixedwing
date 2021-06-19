@@ -27,12 +27,14 @@ public:
              const unsigned target_type, const unsigned model_type, 
              const std::string filepath, const double tmax, const bool debug = false);
 	void init(const double t0, const Vec3 p, const double psi);
+    void start();
 	void update(const double t, const Vec3 p_b_i_I, const Vec3 v_b_I_B, 
                 const Vec3 euler, const Vec3 om_B_I_B, const double T,
                 const Vec3 ctrl_srf); 
 	VecX get_ctrl(double t);
 	VecX get_xhat();
 	VecX get_xbar();
+    bool started();
 
     // Control types
     static const unsigned BODY_RATE = 0;
@@ -71,7 +73,7 @@ private:
     ROMPC_UTILS::OCP _ocp; // optimal control problem
 
     VecX _xbar; // nominal ROM state
-    VecX _ubar; // nominal ROM control
+    Vec4 _ubar; // nominal ROM control
     VecX _xhat; // ROM state estimate
     VecX _u_eq; // equilibrium feed forward control
     VecX _u; // control to be applied
@@ -81,7 +83,10 @@ private:
 
     double _t0; // initialization time (s)
     double _t; // last update time (s)
+    double _t_qp; // last time qp was solved (s)
+    double _qp_dt; // discretization time of MPC
     bool _init = false;
+    bool _started = false;
     Vec4 _q_R_to_B;
 
     unsigned _ctrl_type; // Control type
@@ -101,9 +106,9 @@ private:
     ros::Publisher _zhat_pub;
     ros::Publisher _uprev_pub;
     ros::Publisher _y_pub;
+    ros::Publisher _qptime_pub;
 
     void update_ctrl(const double t, const Vec4 u_prev);
-    void update_sim_rom(const double t);
 };
 
 #endif // ROMPC_CTRL_HPP

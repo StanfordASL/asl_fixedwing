@@ -140,6 +140,11 @@ int main(int argc, char **argv) {
 			ROS_INFO("Initializing ROMPC controller");
 			t_last_reset = t;
 		}
+
+        // Start the MPC solver if not already started
+        if (plane.px4_mode() == "OFFBOARD" && !ctrl.started()) {
+            ctrl.start();
+        }
 		
         // Update controller wih new measurement information
         ctrl.update(t, pos, vel, euler, om, thrust, ctrl_srf);
