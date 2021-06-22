@@ -3,6 +3,11 @@ Fixed Wing Aircraft Control
 
 ![Fixed Wing Image](./img/fixedwing.gif)
 
+# Dependencies
+Ubuntu 18.04 + ROS Melodic
+MAVROS
+Gazebo Simulator
+
 # Setup
 Start by cloning this repository into your ROS1 workspace.
 ```
