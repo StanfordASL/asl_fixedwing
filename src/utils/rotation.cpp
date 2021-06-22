@@ -29,7 +29,7 @@
     @param[in] R  rotation matrix
     @param[in] e  euler angles e = (phi, theta, psi) = (roll, pitch, yaw)
 */
-void Rot::R_to_euler(const Eigen::Matrix3d R, Eigen::Vector3d& e) {
+void Rot::R_to_euler(const Eigen::Matrix3d& R, Eigen::Vector3d& e) {
     // Check for singularity that occurs when pitch = 90 deg
     if (sqrt(R(0,0)*R(0,0) + R(1,0)*R(1,0)) >= 1e-6) {
     	e(0) = atan2(R(2,1), R(2,2));
@@ -50,7 +50,7 @@ void Rot::R_to_euler(const Eigen::Matrix3d R, Eigen::Vector3d& e) {
     @param[in] e  euler angles e = (phi, theta, psi) = (roll, pitch, yaw)
     @param[in] R  rotation matrix
 */
-void Rot::euler_to_R(const Eigen::Vector3d e, Eigen::Matrix3d& R) {
+void Rot::euler_to_R(const Eigen::Vector3d& e, Eigen::Matrix3d& R) {
     R(0,0) = cos(e(1))*cos(e(2));
     R(0,1) = sin(e(0))*sin(e(1))*cos(e(2)) - cos(e(0))*sin(e(2));
     R(0,2) = sin(e(0))*sin(e(2)) + cos(e(0))*sin(e(1))*cos(e(2));
@@ -68,7 +68,7 @@ void Rot::euler_to_R(const Eigen::Vector3d e, Eigen::Matrix3d& R) {
     @param[in] q  unit quaternion q = (w, x, y, z) = w + (x i, y j, z k) 
     @param[in] R  rotation matrix
 */
-void Rot::quat_to_R(const Eigen::Vector4d q, Eigen::Matrix3d& R) {
+void Rot::quat_to_R(const Eigen::Vector4d& q, Eigen::Matrix3d& R) {
     R(0,0) = 1.0 - 2.0*q(2)*q(2) - 2.0*q(3)*q(3);
     R(0,1) = 2.0*q(1)*q(2) - 2.0*q(3)*q(0);
     R(0,2) = 2.0*q(1)*q(3) + 2.0*q(2)*q(0);
@@ -87,7 +87,7 @@ void Rot::quat_to_R(const Eigen::Vector4d q, Eigen::Matrix3d& R) {
     @param[in] q  unit quaternion q = (w, x, y, z) = w + (x i, y j, z k) 
     @param[in] e  euler angles e = (phi, theta, psi) = (roll, pitch, yaw)
 */
-void Rot::quat_to_euler(const Eigen::Vector4d q, Eigen::Vector3d& e) {
+void Rot::quat_to_euler(const Eigen::Vector4d& q, Eigen::Vector3d& e) {
     double R00 = 1.0 - 2.0*q(2)*q(2) - 2.0*q(3)*q(3);
     double R10 = 2.0*q(1)*q(2) + 2*q(3)*q(0);
     if (sqrt(R00*R00 + R10*R10 >= 1e-6)) {
@@ -109,7 +109,7 @@ void Rot::quat_to_euler(const Eigen::Vector4d q, Eigen::Vector3d& e) {
     @param[in] e  euler angles e = (phi, theta, psi) = (roll, pitch, yaw)
     @param[in] q  unit quaternion q = (w, x, y, z) = w + (x i, y j, z k)
 */
-void Rot::euler_to_quat(const Eigen::Vector3d e, Eigen::Vector4d& q) {
+void Rot::euler_to_quat(const Eigen::Vector3d& e, Eigen::Vector4d& q) {
     double phi = 0.5 * e(0);
     double th = 0.5 * e(1);
     double psi = 0.5 * e(2);
@@ -125,7 +125,7 @@ void Rot::euler_to_quat(const Eigen::Vector3d e, Eigen::Vector4d& q) {
     @param[in] aa  axis/angle aa = (x, y, z), th = ||aa||, e = aa/th 
     @param[in] q   unit quaternion q = (w, x, y, z) = w + (x i, y j, z k) 
 */
-void Rot::axis_to_quat(const Eigen::Vector3d aa, Eigen::Vector4d& q) {
+void Rot::axis_to_quat(const Eigen::Vector3d& aa, Eigen::Vector4d& q) {
     double th = aa.norm();
     if (th < 0.0000001) {
         q(0) = 1.0;
@@ -148,7 +148,7 @@ void Rot::axis_to_quat(const Eigen::Vector3d aa, Eigen::Vector4d& q) {
     @param[in] q   unit quaternion q = (w, x, y, z) = w + (x i, y j, z k) 
     @param[in] aa  axis/angle aa = (x, y, z), th = ||aa||, e = aa/th 
 */
-void Rot::quat_to_axis(const Eigen::Vector4d q, Eigen::Vector3d& aa) {
+void Rot::quat_to_axis(const Eigen::Vector4d& q, Eigen::Vector3d& aa) {
     if (q(0) > 0.9999999) { // no rotation
         aa(0) = 0.0;
         aa(1) = 0.0;
@@ -171,7 +171,7 @@ void Rot::quat_to_axis(const Eigen::Vector4d q, Eigen::Vector3d& aa) {
     @param[in] q   unit quaternion q = (qw, qx, qy, qz) = qw + (qx i, qy j, qz k) 
     @param[in] o   composed unit quaternion o = (ow, ox, oy, oz) = ow + (ox i, oy j, oz k) 
 */
-void Rot::compose_quats(const Eigen::Vector4d p, const Eigen::Vector4d q, Eigen::Vector4d& o) {
+void Rot::compose_quats(const Eigen::Vector4d& p, const Eigen::Vector4d q, Eigen::Vector4d& o) {
     o(0) = p(0)*q(0) - (p(1)*q(1) + p(2)*q(2) + p(3)*q(3));
     o(1) = p(0)*q(1) + p(1)*q(0) + p(2)*q(3) - p(3)*q(2);
     o(2) = p(0)*q(2) - p(1)*q(3) + p(2)*q(0) + p(3)*q(1);

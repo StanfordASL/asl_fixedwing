@@ -12,21 +12,21 @@
 
 namespace Rot {
 
-void R_to_euler(const Eigen::Matrix3d R, Eigen::Vector3d& e);
+void R_to_euler(const Eigen::Matrix3d& R, Eigen::Vector3d& e);
 
-void euler_to_R(const Eigen::Vector3d e, Eigen::Matrix3d& R);
+void euler_to_R(const Eigen::Vector3d& e, Eigen::Matrix3d& R);
 
-void quat_to_R(const Eigen::Vector4d q, Eigen::Matrix3d& R);
+void quat_to_R(const Eigen::Vector4d& q, Eigen::Matrix3d& R);
 
-void quat_to_euler(const Eigen::Vector4d q, Eigen::Vector3d& e);
+void quat_to_euler(const Eigen::Vector4d& q, Eigen::Vector3d& e);
 
-void euler_to_quat(const Eigen::Vector3d e, Eigen::Vector4d& q);
+void euler_to_quat(const Eigen::Vector3d& e, Eigen::Vector4d& q);
 
-void axis_to_quat(const Eigen::Vector3d aa, Eigen::Vector4d& q);
+void axis_to_quat(const Eigen::Vector3d& aa, Eigen::Vector4d& q);
 
-void quat_to_axis(const Eigen::Vector4d q, Eigen::Vector3d& aa);
+void quat_to_axis(const Eigen::Vector4d& q, Eigen::Vector3d& aa);
 
-void compose_quats(const Eigen::Vector4d p, const Eigen::Vector4d q, Eigen::Vector4d& o);
+void compose_quats(const Eigen::Vector4d& p, const Eigen::Vector4d q, Eigen::Vector4d& o);
 
 void invert_quat(Eigen::Vector4d& q);
 

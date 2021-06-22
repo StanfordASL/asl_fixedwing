@@ -3,6 +3,5 @@
 	<node pkg="asl_fixedwing" type="sysid_actuator_ctrl" name="sysid_actuator_ctrl" output="screen">
 		<param name="STEP_SIZE" value="0.1" />
 		<param name="HOLD_TIME" value="1.0" />
-		<param name="GAZEBO" value="true" />
 	</node>
 </launch>

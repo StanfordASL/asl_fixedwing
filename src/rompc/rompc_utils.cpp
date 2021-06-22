@@ -8,6 +8,7 @@
 
 #include <rompc/rompc_utils.hpp>
 #include <utils/rotation.hpp>
+#include <utils/data.hpp>
 
 /** 
     @brief Constructor, initialize target class 
@@ -214,80 +215,60 @@ Vec3 ROMPC_UTILS::STF::get_att_aa(double t) {
     @param[in] filepath  path to where the QP matrices are
     @param[in] m         dimension of control vector
 */ 
-ROMPC_UTILS::OCP::OCP(const std::string filepath) {  
+ROMPC_UTILS::OCP::OCP(const std::string filepath, const double tmax)
+                      : _success(false), _solve_time(0.0), _tmax(tmax) {  
     MatX F = Data::load_matrix(filepath + "/F.csv");
     _G = Data::load_matrix(filepath + "/G.csv");
     MatX E = Data::load_matrix(filepath + "/E.csv");
     VecX ubE = Data::load_matrix(filepath + "/ub.csv");
-
+    VecX params = Data::load_matrix(filepath + "/params.csv");
+    
     _nV = E.cols();
     _nC = E.rows();
-    _n = G.rows();
+    _n = _G.rows();
+    _dt = params(1); // discretization time in seconds
+    _N = params(0); // horizon steps
 
     // Initialize QP problem
-    _ocp = qpOASES::QProblem(nV, nC);
+    _ocp = qpOASES::QProblem(_nV, _nC);
     qpOASES::Options options;
     options.setToMPC();
     options.printLevel = qpOASES::PL_NONE;
     _ocp.setOptions(options);
 
     // Define constant problem data structures
+    _F = ArrPtr(new qpOASES::real_t[_nV*_nV]);
+    _E = ArrPtr(new qpOASES::real_t[_nC*_nV]);
+    _ubE = ArrPtr(new qpOASES::real_t[_nC]);
+    _g = ArrPtr(new qpOASES::real_t[_nV]);
+    _U = ArrPtr(new qpOASES::real_t[_nV]);
+
     eigen_to_qpoases(F, _F);
     eigen_to_qpoases(E, _E);
     eigen_to_qpoases(ubE, _ubE);
 
     Eigen::VectorXd x0;
-    x0.resize(n);
+    x0.resize(_n);
     x0.setZero();
     set_x0(x0);
 
     qpOASES::int_t nWSR = 1000;
-    qpOASES::real_t cputime = 1;
-    qpOASES::returnValue st = _ocp.init(_F, _g, _E, nullptr, nullptr, 
-                              nullptr, _ubE, nWSR, &cputime);
+    qpOASES::real_t cputime = _tmax;
+    qpOASES::returnValue st = _ocp.init(_F.get(), _g.get(), _E.get(), nullptr, nullptr, 
+                              nullptr, _ubE.get(), nWSR, &cputime);
 
-    if (st == qpOASES::SUCCESSFUL_RETURN) {
-        std::cout << "Solve time: " << 1000*cputime << " ms" << std::endl;
-    }
-    else if (st == qpOASES::RET_MAX_NWSR_REACHED) {
-        std::cout << "Failure: Max iterations reached" << std::endl;
-    }
-    else {
-        std::cout << "Failure" << std::endl;
-    }
-
-
-    // Sol should be -2.3628, 0.0392, 0.0348, 0.0301 based on Matlab
-    x0(n-6) = 10.0;
-    x0(n-5) = -5.0;
-    set_x0(x0)
-   
-    nWSR = 1000;
-    cputime = 0.01;
-    st = _ocp.hotstart(_g, nullptr, nullptr, 
-                      nullptr, _ubE, nWSR, &cputime);
-
-    if (st == qpOASES::SUCCESSFUL_RETURN) {
-        std::cout << "Solve time: " << 1000*cputime << " ms" << std::endl;
-    }
-    else if (st == qpOASES::RET_MAX_NWSR_REACHED) {
-        std::cout << "Failure: Max iterations reached" << std::endl;
-    }
-    else {
-        std::cout << "Failure" << std::endl;
-    }
-
-    _ocp.getPrimalSolution(_U);
-    printf("\nu0 = [ %e, %e , %e, %e]\n",
-                _U[0], _U[1], _U[2], _U[3]);
+    if (st == qpOASES::SUCCESSFUL_RETURN) _success = true;
+    else _success = false;
+    
+    _solve_time = cputime;
 }
 
 /**
     @brief Converts a Eigen::MatrixXd matrix into an array
     assuming row major ordering used by qpOASES
 */
-void ROMPC_UTILS::OCP::eigen_to_qpoases(const MatX& M, qpOASES::real_t* m) {
-    RowMajMat::Map(m, M.rows(), M.cols()) = M;
+void ROMPC_UTILS::OCP::eigen_to_qpoases(const MatX& M, ArrPtr& m) {
+    RowMajMat::Map(m.get(), M.rows(), M.cols()) = M;
 }
 
 /**
@@ -304,29 +285,50 @@ void ROMPC_UTILS::OCP::set_x0(const VecX x0) {
 
     @param[in] x0        Initial condition
     @param[in] uopt      Writes u_0* to this vector
-    @param[in] cputime   
 
     @param[out] success  boolean if solved successfully
 */
-bool ROMPC_UTILS::OCP::solve(const VecX x0, Vec4& uopt, double& cputime) {
+void ROMPC_UTILS::OCP::solve(const VecX x0, Vec4& uopt) {
     set_x0(x0); // Set the new initial condition
 
     qpOASES::int_t nWSR = 1000;
-    qpOASES::real_t comptime = 0.01;
-    qpOASES::returnValue st = _ocp.hotstart(_g, nullptr, nullptr, 
-                                        nullptr, _ubE, nWSR, &comptime);
+    qpOASES::real_t comptime = _tmax;
+    qpOASES::returnValue st = _ocp.hotstart(_g.get(), nullptr, nullptr, 
+                                        nullptr, _ubE.get(), nWSR, &comptime);
 
     if (st == qpOASES::SUCCESSFUL_RETURN) {
-        _ocp.getPrimalSolution(_U);
+        _ocp.getPrimalSolution(_U.get());
         uopt << _U[0], _U[1], _U[2], _U[3];
-        cputime = comptime;
-        return true;
+        _success = true;
     }
     else {
         uopt.setZero();
-        cputime = -1.0;
-        return false;
+        _success = false;
     }
+
+    _solve_time = comptime;
+}
+
+/**
+    @brief Get most recent status of OCP solver
+*/
+bool ROMPC_UTILS::OCP::success() {
+    return _success;    
+}
+
+/**
+    @brief Get most recent QP solve time
+*/
+double ROMPC_UTILS::OCP::solve_time() {
+    return _solve_time;
+}
+
+double ROMPC_UTILS::OCP::get_dt() {
+    return _dt;
+}
+
+int ROMPC_UTILS::OCP::get_N() {
+    return _N;
 }
 
 /**

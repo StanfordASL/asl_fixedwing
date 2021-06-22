@@ -19,18 +19,22 @@ using VecX = Eigen::VectorXd;
 using Mat3 = Eigen::Matrix3d;
 using MatX = Eigen::MatrixXd;
 
+using TargetPtr = std::unique_ptr<ROMPC_UTILS::Target>; 
+
 class ROMPC {
 public:
 	ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type, 
              const unsigned target_type, const unsigned model_type, 
-             const std::string filepath, const bool debug = false);
+             const std::string filepath, const double tmax, const bool debug = false);
 	void init(const double t0, const Vec3 p, const double psi);
+    void start();
 	void update(const double t, const Vec3 p_b_i_I, const Vec3 v_b_I_B, 
                 const Vec3 euler, const Vec3 om_B_I_B, const double T,
                 const Vec3 ctrl_srf); 
 	VecX get_ctrl(double t);
 	VecX get_xhat();
 	VecX get_xbar();
+    bool started();
 
     // Control types
     static const unsigned BODY_RATE = 0;
@@ -57,29 +61,32 @@ public:
     static const unsigned STF = 2; // steady turning flight
 
 private:
-	MatX _K; // controller gain matrix
-	MatX _L; // estimator gain matrix
-	MatX _A; // system dynamics ...
-	MatX _B; // ...
-	MatX _C; // ...
-	MatX _H; // ... matrices
+    MatX _K; // controller gain matrix
+    MatX _L; // estimator gain matrix
+    MatX _A; // system dynamics ...
+    MatX _B; // ...
+    MatX _C; // ...
+    MatX _H; // ... matrices
     int _n; // state dimensior
     MatX _AL; // A - LC
 
     ROMPC_UTILS::OCP _ocp; // optimal control problem
 
-	VecX _xbar; // nominal ROM state
-	VecX _ubar; // nominal ROM control
-	VecX _xhat; // ROM state estimate
+    VecX _xbar; // nominal ROM state
+    Vec4 _ubar; // nominal ROM control
+    VecX _xhat; // ROM state estimate
     VecX _u_eq; // equilibrium feed forward control
-	VecX _u; // control to be applied
-	VecX _y; // measurement
+    VecX _u; // control to be applied
+    VecX _y; // measurement
     VecX _zhat; // estimated output variables
     VecX _zbar; // nominal output variables
 
-	double _t0; // initialization time (s)
+    double _t0; // initialization time (s)
     double _t; // last update time (s)
+    double _t_qp; // last time qp was solved (s)
+    double _qp_dt; // discretization time of MPC
     bool _init = false;
+    bool _started = false;
     Vec4 _q_R_to_B;
 
     unsigned _ctrl_type; // Control type
@@ -87,7 +94,7 @@ private:
     unsigned _model_type; // Measurement type
     bool _debug;
 
-    std::unique_ptr<ROMPC_UTILS::Target> _target; // pointer to target object
+    TargetPtr _target; // pointer to target object
     
     ros::Publisher _e_pos_pub; // tracking position error [m]
     ros::Publisher _e_vel_pub; // tracking velocity error [m/s]
@@ -99,9 +106,9 @@ private:
     ros::Publisher _zhat_pub;
     ros::Publisher _uprev_pub;
     ros::Publisher _y_pub;
+    ros::Publisher _qptime_pub;
 
     void update_ctrl(const double t, const Vec4 u_prev);
-	void update_sim_rom(const double t);
 };
 
 #endif // ROMPC_CTRL_HPP

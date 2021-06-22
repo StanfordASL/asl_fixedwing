@@ -13,7 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   mavros
   mavros_msgs
-  gazebo_msgs
+#  gazebo_msgs
   geometry_msgs
   tf
   message_generation
@@ -21,7 +21,8 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-
+find_package(LAPACK REQUIRED)
+find_package(BLAS REQUIRED)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -129,6 +130,11 @@ include_directories(
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/fixedwing.cpp
 # )
+SET(QPOASES_INCLUDE_DIRS /home/jlorenze/qpOASES/include)
+SET(QPOASES_LIBRARIES /home/jlorenze/qpOASES/bin/libqpOASES.a
+					${LAPACK_LIBRARIES}
+					${BLAS_LIBRARIES})
+add_library(qpOASES INTERFACE)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -157,6 +163,15 @@ add_executable(position src/examples/position.cpp)
 #   ${catkin_LIBRARIES}
 # )
 
+# qpOASES QP solver
+target_include_directories(qpOASES INTERFACE
+	${QPOASES_INCLUDE_DIRS}
+)
+target_link_libraries(qpOASES INTERFACE
+	${QPOASES_LIBRARIES}
+)
+
+# Executables
 target_link_libraries(position ${catkin_LIBRARIES})
 
 
@@ -167,11 +182,11 @@ add_executable(rompc_node scripts/rompc/rompc_node.cpp
     src/utils/plane.cpp
     src/utils/rotation.cpp
     src/utils/utils.cpp)
-target_link_libraries(rompc_node ${catkin_LIBRARIES})
+target_link_libraries(rompc_node ${catkin_LIBRARIES} qpOASES)
 
-add_executable(sysid_actuator_ctrl scripts/sysid/sysid_actuator_ctrl.cpp
-	src/utils/rotation.cpp)
-target_link_libraries(sysid_actuator_ctrl ${catkin_LIBRARIES})
+#add_executable(sysid_actuator_gazebo scripts/sysid/sysid_actuator_gazebo.cpp
+#	src/utils/rotation.cpp)
+#target_link_libraries(sysid_actuator_gazebo ${catkin_LIBRARIES})
 #############
 ## Install ##
 #############

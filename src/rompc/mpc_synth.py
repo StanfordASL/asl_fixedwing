@@ -139,8 +139,10 @@ if __name__ == '__main__':
     F, G, E, ub = to_standard_QP(Ad, Bd, P, Q, R, U, N)
 
     print('Defining OCP with N = %d and dt = %.2f' % (N, dt))
+    params = np.array([N, dt])
 
     np.savetxt(join(savepath, "F.csv"), F, delimiter=",")
     np.savetxt(join(savepath, "G.csv"), G, delimiter=",")
     np.savetxt(join(savepath, "E.csv"), E, delimiter=",")
     np.savetxt(join(savepath, "ub.csv"), ub, delimiter=",")
+    np.savetxt(join(savepath, "params.csv"), params, delimiter=",")
