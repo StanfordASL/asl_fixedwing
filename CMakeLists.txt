@@ -187,6 +187,10 @@ target_link_libraries(rompc_node ${catkin_LIBRARIES} qpOASES)
 #add_executable(sysid_actuator_gazebo scripts/sysid/sysid_actuator_gazebo.cpp
 #	src/utils/rotation.cpp)
 #target_link_libraries(sysid_actuator_gazebo ${catkin_LIBRARIES})
+
+add_executable(sysid_actuator_skywalker scripts/sysid/sysid_actuator_skywalker.cpp)
+target_link_libraries(sysid_actuator_skywalker ${catkin_LIBRARIES})
+
 #############
 ## Install ##
 #############

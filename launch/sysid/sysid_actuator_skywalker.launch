@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<launch>
+	<node pkg="asl_fixedwing" type="sysid_actuator_skywalker" name="sysid_actuator_skywalker" output="screen">
+		<param name="STEP_SIZE" value="0.1" />
+		<param name="HOLD_TIME" value="10.0" />
+	</node>
+</launch>
