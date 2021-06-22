@@ -5,7 +5,9 @@ Fixed Wing Aircraft Control
 
 # Dependencies
 Ubuntu 18.04 + ROS Melodic
+
 MAVROS
+
 Gazebo Simulator
 
 # Setup
