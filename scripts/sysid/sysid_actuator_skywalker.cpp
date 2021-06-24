@@ -77,7 +77,8 @@ int main(int argc, char **argv) {
     else s = -1.0;
 
     // Define rate for the node
-    ros::Rate rate(50.0);
+    double hertz = 10.0;
+    ros::Rate rate(hertz);
 
     // Turn off auto-disarm before takeoff so sysid can be performed on the ground
     mavros_msgs::ParamSet dsrm_off;
@@ -101,7 +102,7 @@ int main(int argc, char **argv) {
         rate.sleep();
     }
 
-    int hold_steps = HOLD_TIME/0.1;
+    int hold_steps = HOLD_TIME*hertz;
     int inc_steps = 1.0/STEP_SIZE;
     int h = 0;
     int i = 0;
