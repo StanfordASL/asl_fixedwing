@@ -199,9 +199,9 @@ double Plane::dim_ctrl_srf_cmd(const double u_d, const int i) {
     @param[out] thrust setpoint [N]
 */
 double Plane::dim_thrust_cmd(const double u_T, const double V) {
-    if (u_T < .000001) return 0.0;
+    if (u_T < .0001) return 0.0;
     else {
-        return _c_T0*(1.0 - _c_TVom*V/u_T)*pow(u_T, 2.0);
+        return std::max(0.0, _c_T0*(1.0 - _c_TVom*V/u_T)*pow(u_T, 2.0));
     }
 }
 

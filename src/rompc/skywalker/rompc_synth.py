@@ -16,7 +16,7 @@ def cost_weights(ctrl_type):
     elif ctrl_type == 'body_rate':
         # z = [xd_r, yd_r, zd_r, x_r, y_r, z_r, th1, th2, th3]
         # u = [T, th1d, th2d, th3d]
-        Wz = np.diag([0.1, 0.1, 0.1, 1, 1, 1, 0.1, 0.1, 0.1])
+        Wz = np.diag([0.01, 0.01, 0.01, 10, 10, 10, 0.1, 0.1, 0.1])
         Wu = np.diag([10, 100, 100, 100])
     else:
         print('Control type %s not known.' % ctrl_type)

@@ -17,7 +17,9 @@
                       /rompc/zbar
                       /rompc/zhat
                       /rompc/u_prev
-                      /rompc/y"
+                      /rompc/y
+                      /rompc/qp_solve_time
+                      /mavros/target_actuator_control"
     />
 
     <!-- Start ROMPC node 
