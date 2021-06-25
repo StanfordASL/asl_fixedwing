@@ -80,5 +80,4 @@ if __name__ == '__main__':
 
     # Get additional aircraft parameters
     p = aircraft_ctrl_params()
-    # np.savetxt(join(savepath, "ctrl_params.csv"), p, delimiter=",");
-    print('Not regenerating ctrl_params file yet.')
+    np.savetxt(join(savepath, "ctrl_params.csv"), p, delimiter=",");
