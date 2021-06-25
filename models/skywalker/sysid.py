@@ -24,6 +24,9 @@ C = 9.81/1000.0
 def static_thrust(u_T, c_T0):
     return c_T0*u_T**2
 
+def thrust(u_T, c_T0, c_TVom, V):
+    return c_T0*(1.0 - c_TVom*V/u_T)*u_T**2
+
 def aircraft_ctrl_params():
     """
     Compute the parameters that define the aircraft's command to control mappings
@@ -39,7 +42,7 @@ def aircraft_ctrl_params():
     T = C*R*np.concatenate((S_LOW[0:idx], S_HI[0:idx]))
     popt, _ = curve_fit(static_thrust, u_T, T)
     c_T0 = popt[0]
-    c_TVom = 0.08
+    c_TVom = 0.04
 
     # TODO Determine mapping for control surface deflection
     a_0 = 0.0
@@ -61,4 +64,10 @@ if __name__ == '__main__':
     plt.xlabel('u_T')
     plt.ylabel('T [N]')
     plt.legend()
+
+    plt.figure()
+    plt.plot(U_T, thrust(U_T, p[0], p[1], 15.0))
+    plt.xlabel('u_T')
+    plt.ylabel('T [N]')
+    plt.title('Thrust Curve at V = 15.0 m/s')
     plt.show()
