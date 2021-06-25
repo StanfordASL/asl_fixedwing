@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+	<node pkg="asl_fixedwing" type="bodyrate_signs_validation" name="bodyrate_signs_val" output="screen">
+		<param name="CTRL_PARAM_PATH" value="$(find asl_fixedwing)/src/rompc/skywalker/slf"/>
+	</node>
+</launch>

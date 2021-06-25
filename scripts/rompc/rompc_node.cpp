@@ -1,8 +1,8 @@
 /*
-	@file rompc_node.cpp
-	ROS node for running ROMPC controller.
+    @file rompc_node.cpp
+    ROS node for running ROMPC controller.
 
-	@brief Does stuff.
+    @brief Does stuff.
 */
 
 #include <rompc/rompc.hpp>
@@ -13,8 +13,8 @@
 #include <iostream>
 
 int main(int argc, char **argv) {
-	ros::init(argc, argv, "rompc_node");
-	ros::NodeHandle nh;
+    ros::init(argc, argv, "rompc_node");
+    ros::NodeHandle nh;
     
     // Access parameters
     double T_RESET = 5.0; // seconds between resetting controller before activated
@@ -100,31 +100,31 @@ int main(int argc, char **argv) {
     // Initialize Plane object
     Plane plane(nh, CTRL_TYPE, filepath);
 
-	// Initialize controller
+    // Initialize controller
     bool debug = true;
-	ROMPC ctrl(nh, CTRL_TYPE, TARGET_TYPE, MODEL_TYPE, filepath, QP_TMAX, debug);
+    ROMPC ctrl(nh, CTRL_TYPE, TARGET_TYPE, MODEL_TYPE, filepath, QP_TMAX, debug);
 
-	// Define rate for the node
-	ros::Rate rate(CTRL_RATE);
+    // Define rate for the node
+    ros::Rate rate(CTRL_RATE);
 
-	// Wait for FCU connection
-	while(ros::ok() && !plane.px4_connected()) {
-		ros::spinOnce();
-		rate.sleep();
-	}
+    // Wait for FCU connection
+    while(ros::ok() && !plane.px4_connected()) {
+        ros::spinOnce();
+        rate.sleep();
+    }
     ROS_INFO("PX4 connection established");
 
-	// Main loop, until ROS shutdown
-	double t0 = ros::Time::now().toSec();
-	double t = t0;
-	double t_last_reset = t0;
-	double dt;
-	
+    // Main loop, until ROS shutdown
+    double t0 = ros::Time::now().toSec();
+    double t = t0;
+    double t_last_reset = t0;
+    double dt;
+    
 
-	while(ros::ok()) {
-		// Each call to spinOnce will result in subscriber callbacks
-		ros::spinOnce();
-		t = ros::Time::now().toSec();
+    while(ros::ok()) {
+        // Each call to spinOnce will result in subscriber callbacks
+        ros::spinOnce();
+        t = ros::Time::now().toSec();
 
         // Get current measurements
         Eigen::Vector3d pos = plane.get_pos();
@@ -132,28 +132,28 @@ int main(int argc, char **argv) {
         Eigen::Vector3d euler = plane.get_euler();
         Eigen::Vector3d om = plane.get_bodyrate();
         double thrust = plane.get_thrust();
-		Eigen::Vector3d ctrl_srf = plane.get_ctrl_srf();
+        Eigen::Vector3d ctrl_srf = plane.get_ctrl_srf();
 
         // If offboard mode not yet set, periodically reset controller
-		if (plane.px4_mode() != "OFFBOARD" && t - t_last_reset > T_RESET) {
-			ctrl.init(t, pos, euler(2));
-			ROS_INFO("Initializing ROMPC controller");
-			t_last_reset = t;
-		}
+        if (plane.px4_mode() != "OFFBOARD" && t - t_last_reset > T_RESET) {
+            ctrl.init(t, pos, euler(2));
+            ROS_INFO("Initializing ROMPC controller");
+            t_last_reset = t;
+        }
 
         // Start the MPC solver if not already started
         if (plane.px4_mode() == "OFFBOARD" && !ctrl.started()) {
             ctrl.start();
         }
-		
+        
         // Update controller wih new measurement information
         ctrl.update(t, pos, vel, euler, om, thrust, ctrl_srf);
         
         // Send control
         plane.send_control(ctrl.get_ctrl(t));
 
-		// Add a check on ROMPC controller failure and
-		// have backup be a loiter or something using a change mode
-		rate.sleep(); // sleep for remaining time
-	}
+        // Add a check on ROMPC controller failure and
+        // have backup be a loiter or something using a change mode
+        rate.sleep(); // sleep for remaining time
+    }
 }
