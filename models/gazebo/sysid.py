@@ -43,4 +43,4 @@ def aircraft_ctrl_params():
 	return np.array([c_T0, c_TVom, a_0, c_a, e_0, c_e, r_0, c_r])
 
 if __name__ == '__main__':
-	aircraft_params()
+	aircraft_ctrl_params()
