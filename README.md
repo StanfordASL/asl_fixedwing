@@ -1,4 +1,6 @@
 # asl_fixedwing
+![Skywalker Image](./img/skywalker.jpg)
+
 The Autonomous System Lab's repository for code related to fixedwing aircraft flight. This repository can be used to run code in simulation using Gazebo as well as on board the Skywalker aircraft. Some documentation can be found for the hardware + build + simulation + modeling & control in the docs/ directory or on [Overleaf](https://www.overleaf.com/read/ccyrgryqcnwj) (for edit access to documentation ask Joe Lorenzetti).
 
 ![Fixed Wing Image](./img/fixedwing.gif)
