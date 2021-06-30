@@ -108,9 +108,9 @@ class planeData:
     def __init__(self):
         self.pos = pointStream() # inertial pos x_i, y_i, z_i [m]
         self.vel = pointStream() # body frame vel u, v, w [m/s]
-        self.euler = pointStream() # euler angle phi, th, psi [deg]
-        self.om = pointStream() # body rate p, q, r [deg/s]
-        self.act = ctrlStream() # thrust [N] and ctrl srf def [deg]
+        self.euler = pointStream() # euler angle phi, th, psi [rad]
+        self.om = pointStream() # body rate p, q, r [rad/s]
+        self.act = ctrlStream() # thrust [N] and ctrl srf def [rad]
 
     def add_msg(self, topic, msg, t):
         """
