@@ -63,6 +63,9 @@ def aadot_to_om(aa, aadot):
 def get_data_dir():
     return dirname(abspath(__file__))
 
+def get_models_dir():
+    return join(dirname(dirname(abspath(__file__))), 'models')
+
 class pointStream:
     def __init__(self):
         self.x = []

@@ -1,10 +1,11 @@
-from os.path import join, isfile
+from os.path import join, isfile, dirname
 from matplotlib import pyplot as plt
 import sys
 import numpy as np
+from scipy.interpolate import interp1d
 import pdb
 
-from utils import get_data_dir, RosbagData, aadot_to_om
+from utils import get_data_dir, RosbagData, aadot_to_om, get_models_dir
 
 if __name__ == '__main__':
     if len(sys.argv) <= 1:
@@ -23,7 +24,34 @@ if __name__ == '__main__':
     t0 = data.plane.act.t[idx[0]]
     tf = data.plane.act.t[idx[-1]]
 
-    pdb.set_trace()
+    # Compute thrust estimate
+    sys.path.append(join(get_models_dir(), "skywalker"))
+    from sysid import aircraft_ctrl_params, thrust
+    p = aircraft_ctrl_params()
+    c_T0, c_TVom = p[0], p[1]
+    T_est = []
+    f = interp1d(data.plane.vel.t, data.plane.vel.x, bounds_error=False, fill_value='extrapolate')
+    for t, u_T in zip(data.plane.act.t, data.plane.nrmlzd_act.u[3]):
+        if u_T < .0001:
+            T_est.append(0.0)
+        else:
+            T_est.append(thrust(u_T, c_T0, c_TVom, f(t)))
+
+    # Load equilibrium thrust
+    fpath = join(dirname(data_dir), 'src/rompc/skywalker/slf/u_eq.csv')
+    u_eq = np.loadtxt(fpath, delimiter=",")
+    T_rompc = np.array(data.rompc.u.u[0]) + u_eq[0]
+
+    # Convert axis/angle rate commands to body rates
+    e_att = np.vstack((data.rompc.e_att.x, data.rompc.e_att.y, data.rompc.e_att.z))
+    f = interp1d(data.rompc.e_att.t, e_att, bounds_error=False, fill_value='extrapolate')
+    om_rompc = np.empty((0,3))
+    for i, t in enumerate(data.rompc.u.t):
+        aa_dot = np.array([data.rompc.u.u[1][i], 
+                           data.rompc.u.u[2][i], 
+                           data.rompc.u.u[3][i]])
+        om = aadot_to_om(f(t), aa_dot)
+        om_rompc = np.vstack((om_rompc, om))
 
     # Plot plane related data streams
     fig, axs1 = plt.subplots(4, 1, sharex='col')
@@ -65,7 +93,7 @@ if __name__ == '__main__':
     axs2[2].plot(data.plane.vel.t, data.plane.vel.V, 'r', label='plane.V')
     axs2[2].set_ylabel('Velocity [m/s]')
 
-    axs2[3].plot(data.plane.act.t, data.plane.act.u[3], 'r', label='plane.thrust')
+    axs2[3].plot(data.plane.act.t, T_est, 'r')
     axs2[3].set_ylabel('Thrust Estimate [N]')
 
 
@@ -74,66 +102,49 @@ if __name__ == '__main__':
     axs2[0].set_xlim(t0, tf)
 
 
+    # Plot plane related data streams
+    fig, axs3 = plt.subplots(3, 1, sharex='col')
+    axs3[0].plot(data.rompc.e_pos.t, data.rompc.e_pos.x, 'r', label='rompc.e_x')
+    axs3[0].plot(data.rompc.e_pos.t, data.rompc.e_pos.y, 'g', label='rompc.e_y')
+    axs3[0].plot(data.rompc.e_pos.t, data.rompc.e_pos.z, 'b', label='rompc.e_z')
+    axs3[0].plot(data.rompc.zhat.t, data.rompc.zhat.z[3], 'r*', label='rompc.e_x_est')
+    axs3[0].plot(data.rompc.zhat.t, data.rompc.zhat.z[4], 'g*', label='rompc.e_y_est')
+    axs3[0].plot(data.rompc.zhat.t, data.rompc.zhat.z[5], 'b*', label='rompc.e_z_est')
+    axs3[0].set_ylabel('Position error [m]')
 
-    # axs[0][0].plot(data.rompc.e_pos.t, data.rompc.e_pos.x, 'b.')
-    # axs[1][0].plot(data.rompc.e_pos.t, data.rompc.e_pos.y, 'b.')
-    # axs[2][0].plot(data.rompc.e_pos.t, data.rompc.e_pos.z, 'b.')
-    # if sys.argv[1] == 'std':
-    #     axs[0][0].plot(data.rompc.zhat.t, data.rompc.zhat.z[6], 'g.')
-    #     axs[1][0].plot(data.rompc.zhat.t, data.rompc.zhat.z[7], 'g.')
-    #     axs[2][0].plot(data.rompc.zhat.t, data.rompc.zhat.z[8], 'g.')
-    # elif sys.argv[1] == 'cfd':
-    #     axs[0][0].plot(data.rompc.zhat.t, data.rompc.zhat.z[3], 'g.')
-    #     axs[1][0].plot(data.rompc.zhat.t, data.rompc.zhat.z[4], 'g.')
-    #     axs[2][0].plot(data.rompc.zhat.t, data.rompc.zhat.z[5], 'g.')
-    # axs[0][0].set_ylabel('x_r')
-    # axs[1][0].set_ylabel('y_r')
-    # axs[2][0].set_ylabel('z_r')
+    axs3[1].plot(data.rompc.e_vel.t, data.rompc.e_vel.x, 'r', label='rompc.e_xd')
+    axs3[1].plot(data.rompc.e_vel.t, data.rompc.e_vel.y, 'g', label='rompc.e_yd')
+    axs3[1].plot(data.rompc.e_vel.t, data.rompc.e_vel.z, 'b', label='rompc.e_zd')
+    axs3[1].plot(data.rompc.zhat.t, data.rompc.zhat.z[0], 'r*', label='rompc.e_xd_est')
+    axs3[1].plot(data.rompc.zhat.t, data.rompc.zhat.z[1], 'g*', label='rompc.e_yd_est')
+    axs3[1].plot(data.rompc.zhat.t, data.rompc.zhat.z[2], 'b*', label='rompc.e_zd_est')
+    axs3[1].set_ylabel('Velocity error [m/s]')
 
+    axs3[2].plot(data.rompc.e_att.t, np.rad2deg(data.rompc.e_att.x), 'r', label='rompc.e_att_x')
+    axs3[2].plot(data.rompc.e_att.t, np.rad2deg(data.rompc.e_att.y), 'g', label='rompc.e_att_y')
+    axs3[2].plot(data.rompc.e_att.t, np.rad2deg(data.rompc.e_att.z), 'b', label='rompc.e_att_z')
+    axs3[2].plot(data.rompc.zhat.t, np.rad2deg(data.rompc.zhat.z[6]), 'r*', label='rompc.e_att_x_est')
+    axs3[2].plot(data.rompc.zhat.t, np.rad2deg(data.rompc.zhat.z[7]), 'g*', label='rompc.e_att_y_est')
+    axs3[2].plot(data.rompc.zhat.t, np.rad2deg(data.rompc.zhat.z[8]), 'b*', label='rompc.e_att_z_est')
+    axs3[2].set_ylabel('Attitude error [deg]')
 
-    # axs[3][0].plot(data.rompc.e_vel.t, data.rompc.e_vel.x, 'b.')
-    # axs[4][0].plot(data.rompc.e_vel.t, data.rompc.e_vel.y, 'b.')
-    # axs[5][0].plot(data.rompc.e_vel.t, data.rompc.e_vel.z, 'b.')
-    # axs[3][0].plot(data.rompc.zhat.t, data.rompc.zhat.z[0], 'g.')
-    # axs[4][0].plot(data.rompc.zhat.t, data.rompc.zhat.z[1], 'g.')
-    # axs[5][0].plot(data.rompc.zhat.t, data.rompc.zhat.z[2], 'g.')
-    # if sys.argv[1] == 'std':
-    #     axs[3][0].set_ylabel('e_u')
-    #     axs[4][0].set_ylabel('e_v')
-    #     axs[5][0].set_ylabel('e_w')
-    # elif sys.argv[1] == 'cfd':
-    #     axs[3][0].set_ylabel('xd_r')
-    #     axs[4][0].set_ylabel('yd_r')
-    #     axs[5][0].set_ylabel('zd_r')
+    for ax in axs3:
+        ax.legend()
+    axs3[0].set_xlim(t0, tf)
+
+    fig, axs4 = plt.subplots(2, 1, sharex='col')
     
+    axs4[0].plot(data.rompc.u.t, T_rompc, 'r', label='rompc.u[0]')
+    axs4[0].set_ylabel('Thrust Command [N]')
 
-    # axs[6][0].plot(data.rompc.e_att.t, np.rad2deg(data.rompc.e_att.x), 'b.')
-    # axs[7][0].plot(data.rompc.e_att.t, np.rad2deg(data.rompc.e_att.y), 'b.')
-    # axs[8][0].plot(data.rompc.e_att.t, np.rad2deg(data.rompc.e_att.z), 'b.')
-    # if sys.argv[1] == 'std':
-    #     axs[6][0].plot(data.rompc.zhat.t, np.rad2deg(data.rompc.zhat.z[3]), 'g.')
-    #     axs[7][0].plot(data.rompc.zhat.t, np.rad2deg(data.rompc.zhat.z[4]), 'g.')
-    #     axs[8][0].plot(data.rompc.zhat.t, np.rad2deg(data.rompc.zhat.z[5]), 'g.')
-    #     axs[6][0].set_ylabel('e_phi')
-    #     axs[7][0].set_ylabel('e_th')
-    #     axs[8][0].set_ylabel('e_psi')
-    # elif sys.argv[1] == 'cfd':
-    #     axs[6][0].plot(data.rompc.zhat.t, np.rad2deg(data.rompc.zhat.z[6]), 'g.')
-    #     axs[7][0].plot(data.rompc.zhat.t, np.rad2deg(data.rompc.zhat.z[7]), 'g.')
-    #     axs[8][0].plot(data.rompc.zhat.t, np.rad2deg(data.rompc.zhat.z[8]), 'g.')
-    #     axs[6][0].set_ylabel('e_th1')
-    #     axs[7][0].set_ylabel('e_th2')
-    #     axs[8][0].set_ylabel('e_th3')
+    axs4[1].plot(data.rompc.u.t, np.rad2deg(om_rompc[:,0]), 'r', label='rompc.p')
+    axs4[1].plot(data.rompc.u.t, np.rad2deg(om_rompc[:,1]), 'g', label='rompc.q')
+    axs4[1].plot(data.rompc.u.t, np.rad2deg(om_rompc[:,2]), 'b', label='rompc.r')
+    axs4[1].set_ylabel('Body Rate Command [deg/s]')
 
-
-
-    # axs[0][1].plot(data.rompc.u.t, data.rompc.u.u[0], 'b.', label='ROMPC')
-    # if sys.argv[1] == 'std':
-    #     axs[1][1].plot(data.rompc.u.t, np.rad2deg(data.rompc.u.u[1]), 'b.', label='ROMPC')
-    #     axs[2][1].plot(data.rompc.u.t, np.rad2deg(data.rompc.u.u[2]), 'b.', label='ROMPC')
-    #     axs[3][1].plot(data.rompc.u.t, np.rad2deg(data.rompc.u.u[3]), 'b.', label='ROMPC')
-
-    plt.legend()
+    for ax in axs4:
+        ax.legend()
+    axs4[0].set_xlim(t0, tf)
 
     plt.show()
 
