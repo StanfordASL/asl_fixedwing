@@ -19,7 +19,7 @@ if __name__ == '__main__':
     data = RosbagData(fpath)
 
     # Find beginning and end of flight
-    idx = np.where(np.abs(np.array(data.plane.act.u[0])) > 0.0)[0]
+    idx = np.where(np.abs(np.array(data.plane.act.u[3])) > 0.0)[0]
     t0 = data.plane.act.t[idx[0]]
     tf = data.plane.act.t[idx[-1]]
 
@@ -30,12 +30,12 @@ if __name__ == '__main__':
     axs1[0].plot(data.plane.pos.t, data.plane.pos.x, 'r', label='plane.x')
     axs1[0].plot(data.plane.pos.t, data.plane.pos.y, 'g', label='plane.y')
     axs1[0].plot(data.plane.pos.t, data.plane.pos.z, 'b', label='plane.z')
-    axs1[0].set_ylabel('Inertial Position [m]')
+    axs1[0].set_ylabel('Position [m]')
 
     axs1[1].plot(data.plane.vel.t, data.plane.vel.x, 'r', label='plane.u')
     axs1[1].plot(data.plane.vel.t, data.plane.vel.y, 'g', label='plane.v')
     axs1[1].plot(data.plane.vel.t, data.plane.vel.z, 'b', label='plane.w')
-    axs1[1].set_ylabel('Inertial Velocity [m/s]')
+    axs1[1].set_ylabel('Velocity [m/s]')
 
     axs1[2].plot(data.plane.euler.t, np.rad2deg(data.plane.euler.x), 'r', label='plane.roll')
     axs1[2].plot(data.plane.euler.t, np.rad2deg(data.plane.euler.y), 'g', label='plane.pitch')
@@ -45,7 +45,7 @@ if __name__ == '__main__':
     axs1[3].plot(data.plane.om.t, np.rad2deg(data.plane.om.x), 'r', label='plane.p')
     axs1[3].plot(data.plane.om.t, np.rad2deg(data.plane.om.y), 'g', label='plane.q')
     axs1[3].plot(data.plane.om.t, np.rad2deg(data.plane.om.z), 'b', label='plane.r')
-    axs1[3].set_ylabel('Inertial Angular Velocity [deg/s]')
+    axs1[3].set_ylabel('Angular Velocity [deg/s]')
 
     for ax in axs1:
         ax.legend()
@@ -53,17 +53,25 @@ if __name__ == '__main__':
 
 
     fig, axs2 = plt.subplots(4, 1, sharex='col')
-    axs2[0].plot(data.plane.act.t, data.plane.act.u[0], 'r', label='plane.thrust')
-    axs2[0].set_ylabel('Thrust Estimate [N]')
+    
+    axs2[0].plot(data.plane.nrmlzd_act.t, data.plane.nrmlzd_act.u[3], 'r', label='plane.thrust')
+    axs2[0].set_ylabel('Throttle')
+
+    axs2[1].plot(data.plane.act.t, np.rad2deg(data.plane.act.u[0]), 'r', label='plane.aileron')
+    axs2[1].plot(data.plane.act.t, np.rad2deg(data.plane.act.u[1]), 'g', label='plane.elevator')
+    axs2[1].plot(data.plane.act.t, np.rad2deg(data.plane.act.u[2]), 'b', label='plane.rudder')
+    axs2[1].set_ylabel('Ctrl Srf Dflct [deg]')
+
+    axs2[2].plot(data.plane.vel.t, data.plane.vel.V, 'r', label='plane.V')
+    axs2[2].set_ylabel('Velocity [m/s]')
+
+    axs2[3].plot(data.plane.act.t, data.plane.act.u[3], 'r', label='plane.thrust')
+    axs2[3].set_ylabel('Thrust Estimate [N]')
 
 
-    axs2[1].plot(data.plane.act.t, np.rad2deg(data.plane.act.u[1]), 'r', label='plane.aileron')
-    axs2[1].plot(data.plane.act.t, np.rad2deg(data.plane.act.u[2]), 'g', label='plane.elevator')
-    axs2[1].plot(data.plane.act.t, np.rad2deg(data.plane.act.u[3]), 'b', label='plane.rudder')
-    axs2[1].set_ylabel('Control Surface Deflections [deg]')
-
-
-
+    for ax in axs2:
+        ax.legend()
+    axs2[0].set_xlim(t0, tf)
 
 
 

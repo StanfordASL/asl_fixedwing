@@ -1,6 +1,7 @@
 from os.path import dirname, abspath, join, isfile, isdir
 import sys
 import rosbag
+import numpy as np
 
 """
     @brief Computes operator T such that om = T(aa) * aa_dot which
@@ -111,6 +112,10 @@ class planeData:
         self.euler = pointStream() # euler angle phi, th, psi [rad]
         self.om = pointStream() # body rate p, q, r [rad/s]
         self.act = ctrlStream() # thrust [N] and ctrl srf def [rad]
+        self.nrmlzd_act = ctrlStream() # normalized actuators
+
+        # Total velocity
+        self.vel.V = []
 
     def add_msg(self, topic, msg, t):
         """
@@ -120,12 +125,15 @@ class planeData:
             self.pos.add_point(t, msg.point.x, msg.point.y, msg.point.z)
         elif topic == 'velocity':
             self.vel.add_point(t, msg.point.x, msg.point.y, msg.point.z)
+            self.vel.V.append(np.sqrt(msg.point.x**2 + msg.point.y**2 + msg.point.z**2))
         elif topic == 'euler':
             self.euler.add_point(t, msg.point.x, msg.point.y, msg.point.z)
         elif topic == 'bodyrate':
             self.om.add_point(t, msg.point.x, msg.point.y, msg.point.z)
         elif topic == 'actuators':
             self.act.add_point(t, msg.controls)
+        elif topic == 'target_actuator_control':
+            self.nrmlzd_act.add_point(t, msg.controls)
 
 
 class rompcData:
@@ -149,6 +157,7 @@ class rompcData:
         self.zhat = zStream()
         self.u_prev = ctrlStream() # Control used in state estimator
         self.y = zStream()
+        self.qp_solve_time = zStream()
 
     def add_msg(self, topic, msg, t):
         """
@@ -174,6 +183,9 @@ class rompcData:
             self.u_prev.add_point(t, msg.data)
         elif topic == 'y':
             self.y.add_point(t, msg.data)
+        elif topic == 'qp_solve_time':
+            pdb.set_trace()
+            self.qp_solve_time.add_point(t, msg.data)
 
 
 class RosbagData:
@@ -193,7 +205,9 @@ class RosbagData:
                   '/rompc/attrate_error',
                   '/rompc/ubar', '/rompc/u', 
                   '/rompc/zbar', '/rompc/zhat',
-                  '/rompc/u_prev', '/rompc/y']
+                  '/rompc/u_prev', '/rompc/y',
+                  '/rompc/qp_solve_time',
+                  '/mavros/target_actuator_control']
         for topic, msg, t in bag.read_messages(topics=topics):
             self.add_msg(msg, topic)
     
@@ -206,7 +220,7 @@ class RosbagData:
     def add_msg(self, msg, topic):
         main, sub = topic.split('/')[1:3]
         t = self.extract_time(msg)
-        if main == 'plane':
+        if main == 'plane' or main == 'mavros':
             self.plane.add_msg(sub, msg, t)
         elif main == 'rompc':
             self.rompc.add_msg(sub, msg, t)
