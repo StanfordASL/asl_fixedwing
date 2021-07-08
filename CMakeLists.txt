@@ -183,6 +183,7 @@ add_executable(rompc_node scripts/rompc/rompc_node.cpp
     src/utils/rotation.cpp
     src/utils/utils.cpp)
 target_link_libraries(rompc_node ${catkin_LIBRARIES} qpOASES)
+add_dependencies(rompc_node asl_fixedwing_generate_messages_cpp)
 
 #add_executable(sysid_actuator_gazebo scripts/sysid/sysid_actuator_gazebo.cpp
 #	src/utils/rotation.cpp)
@@ -190,6 +191,7 @@ target_link_libraries(rompc_node ${catkin_LIBRARIES} qpOASES)
 
 add_executable(sysid_actuator_skywalker scripts/sysid/sysid_actuator_skywalker.cpp)
 target_link_libraries(sysid_actuator_skywalker ${catkin_LIBRARIES})
+add_dependencies(sysid_actuator_skywalker asl_fixedwing_generate_messages_cpp)
 
 add_executable(bodyrate_signs_validation scripts/sysid/bodyrate_signs_validation.cpp
     src/utils/data.cpp
@@ -197,7 +199,7 @@ add_executable(bodyrate_signs_validation scripts/sysid/bodyrate_signs_validation
     src/utils/rotation.cpp
     src/utils/utils.cpp)
 target_link_libraries(bodyrate_signs_validation ${catkin_LIBRARIES})
-
+add_dependencies(bodyrate_signs_validation asl_fixedwing_generate_messages_cpp)
 #############
 ## Install ##
 #############
