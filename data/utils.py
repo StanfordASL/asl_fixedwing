@@ -187,8 +187,7 @@ class rompcData:
         elif topic == 'y':
             self.y.add_point(t, msg.data)
         elif topic == 'qp_solve_time':
-            pdb.set_trace()
-            self.qp_solve_time.add_point(t, msg.data)
+            self.qp_solve_time.add_point(t, [msg.data])
 
 
 class RosbagData:
@@ -222,7 +221,11 @@ class RosbagData:
 
     def add_msg(self, msg, topic):
         main, sub = topic.split('/')[1:3]
-        t = self.extract_time(msg)
+        if sub == 'qp_solve_time':
+            t = 0
+        else:
+            t = self.extract_time(msg)
+
         if main == 'plane' or main == 'mavros':
             self.plane.add_msg(sub, msg, t)
         elif main == 'rompc':
