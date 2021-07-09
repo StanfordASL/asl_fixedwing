@@ -22,10 +22,13 @@
     @param[in] ctrl_type    ROMPC::BODY_RATE or ROMPC::CTRL_SURF
     @param[in] target_type  ROMPC::SGF,SLF,STF
     @param[in] model_type   ROMPC::STANDARD or ROMPC::CFD
+    @param[in] dt           timestep for controller, seconds
     @param[in] filepath     to directory containing model definition
+    @param[in] tmax         max time for OCP, seconds
+    @param[in] debug        boolean
 */
 ROMPC::ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type, 
-             const unsigned target_type, const unsigned model_type, 
+             const unsigned target_type, const unsigned model_type, double dt, 
              const std::string filepath, const double tmax, const bool debug)
              : _ctrl_type(ctrl_type), _target_type(target_type), 
              _model_type(model_type), _debug(debug), _ocp(filepath, tmax) {
@@ -96,7 +99,13 @@ ROMPC::ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type,
 	_K = Data::load_matrix(filepath + "/K.csv");
 	_L = Data::load_matrix(filepath + "/L.csv");
     _u_eq = Data::load_vector(filepath + "/u_eq.csv");
-    _AL = _A - _L*_C;
+    _n = _A.rows();
+    int m = _B.cols();
+    int p = _C.rows();
+
+    // Compute QR decompositions for implicit Euler
+    _M_est.compute(MatX::Identity(_n, _n) - dt*(_A - _L*_C));
+    _M_rom.compute(MatX::Identity(_n, _n) - dt*_A);
 
     // ROS publishers
     _e_pos_pub = nh.advertise<geometry_msgs::PointStamped>
@@ -125,9 +134,6 @@ ROMPC::ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type,
     }
 
     // Initialize other variables to zero
-    _n = _A.rows();
-    int m = _B.cols();
-    int p = _C.rows();
     _xbar.resize(_n);
     _ubar.resize(m);
     _xhat.resize(_n);
@@ -298,9 +304,7 @@ void ROMPC::update_ctrl(const double t, const Vec4 u_prev) {
     _t = t;
 
     // Update state estimate from previous step using backward Euler
-    MatX M = MatX::Identity(_n, _n) - dt*(_AL);
-    _xhat = M.householderQr().solve(_xhat + dt*_B*u_prev + dt*_L*_y); // backward Euler
-    //_xhat += dt*(_A*_xhat + _B*u_prev + _L*(_y - _C*_xhat)); // forward Euler
+    _xhat = _M_est.solve(_xhat + dt*_B*u_prev + dt*_L*_y); // backward Euler
     _zhat = _H*_xhat;
     
     // Update simulated ROM
@@ -319,8 +323,7 @@ void ROMPC::update_ctrl(const double t, const Vec4 u_prev) {
         }
     }
     
-    M = MatX::Identity(_n, _n) - dt*(_A);
-    _xbar = M.householderQr().solve(_xbar + dt*_B*_ubar); // backward Euler
+    _xbar = _M_rom.solve(_xbar + dt*_B*_ubar); // backward Euler
     _zbar = _H*_xbar;
     
     // Control law

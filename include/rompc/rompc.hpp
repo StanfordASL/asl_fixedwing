@@ -24,7 +24,7 @@ using TargetPtr = std::unique_ptr<ROMPC_UTILS::Target>;
 class ROMPC {
 public:
 	ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type, 
-             const unsigned target_type, const unsigned model_type, 
+             const unsigned target_type, const unsigned model_type, double dt, 
              const std::string filepath, const double tmax, const bool debug = false);
 	void init(const double t0, const Vec3 p, const double psi);
     void start();
@@ -68,7 +68,8 @@ private:
     MatX _C; // ...
     MatX _H; // ... matrices
     int _n; // state dimensior
-    MatX _AL; // A - LC
+    Eigen::HouseholderQR<MatX> _M_est; // I - dt*(A-LC) factorized
+    Eigen::HouseholderQR<MatX> _M_rom; // I - dt*A factorized
 
     ROMPC_UTILS::OCP _ocp; // optimal control problem
 
