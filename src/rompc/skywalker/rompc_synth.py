@@ -13,8 +13,8 @@ def cost_weights(ctrl_type):
     if ctrl_type == 'ctrl_surf':
         # z = [xd_r, yd_r, zd_r, th1d, th2d, th3d, x_r, y_r, z_r, th1, th2, th3, a, e, r]
         # u = [T, ad, ed, rd]
-        Wz = np.diag([0.01, 0.01, 0.01, 100, 100, 100, 10, 10, 10, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
-        Wu = np.diag([10, 10, 10, 10])
+        Wz = np.diag([0.01, 0.01, 0.01, 100, 100, 100, 10, 10, 10, 0.1, 0.1, 0.1, 1, 1, 1])
+        Wu = np.diag([10, 1, 1, 1])
     elif ctrl_type == 'body_rate':
         # z = [xd_r, yd_r, zd_r, x_r, y_r, z_r, th1, th2, th3]
         # u = [T, th1d, th2d, th3d]
