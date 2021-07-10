@@ -146,6 +146,63 @@ def invert_quat(q):
     """
     return np.array([q[0], -q[1], -q[2], -q[3]])
 
+def tangential_transf(aa):
+    """
+    @brief Computes operator T such that om = T(aa) * aa_dot which
+    transforms the rate of change of axis/angle representation of
+    rotation from A to B into the angular velocity of B w.r.t A written
+    in B coordinates.
+
+    @param[in] aa  axis angle representation aa = (th1, th2, th3)
+    """
+    th2 = np.linalg.norm(aa)**2
+
+    if th2 < 5e-6:
+        th4 = th2 * th2
+        c1 = 1.0  - th2/6   + th4/120
+        c2 = 1/2. - th2/24  + th4/720
+        c3 = 1/6. - th2/120 + th4/5040
+    else:
+        th = np.sqrt(th2)
+        c1 = np.sin(th)/th
+        c2 = (1 - np.cos(th))/th2
+        c3 = (th - np.sin(th))/(th * th2)
+
+    skew_th = np.array([[0.0, -aa[2], aa[1]],
+                        [aa[2], 0.0, -aa[0]],
+                        [-aa[1], aa[0], 0.0]])
+
+
+    T = c1*np.eye(3) - c2*skew_th + c3*np.outer(aa, aa)
+    return T
+
+def om_to_aadot(aa, om):
+    """
+    @brief Converts the angular velocity vector om for a frame B rotating w.r.t A
+    into the rate of change of the axis/angle parameters that represent the
+    rotation from A to B.
+
+    @param[in] aa     axis/angle repr. of rotation from A to B frames [rad]
+    @param[in] om     angular velocity of B w.r.t A [rad/s]
+    @param[in] aadot  time derivative of aa [rad/s]
+    """
+    T = tangential_transf(aa)
+    aadot = np.matmul(np.linalg.inv(T), om)
+    return aadot
+
+def aadot_to_om(aa, aadot):
+    """
+    @brief Given current axis/angle parameters for rotation from A to B and their
+    time derivatives, computes the angular velocity vector of B w.r.t A.
+
+    @param[in] aa     axis/angle repr. of rotation from A to B frames [rad]
+    @param[in] aadot  time derivative of aa [rad/s]
+    @param[in] om     angular velocity of B w.r.t A [rad/s]
+    """
+    T = tangential_transf(aa)
+    om = np.matmul(T, aadot);
+    return om
+
 
 if __name__ == '__main__':
     # Testing quat to euler
