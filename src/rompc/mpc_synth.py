@@ -8,7 +8,6 @@ from os.path import dirname, abspath, join, isdir
 from os import mkdir
 import numpy as np
 from scipy.linalg import solve_discrete_are, expm, block_diag
-import pdb
 
 class Polyhedron(object):
     def __init__(self, A, b):
@@ -51,21 +50,29 @@ def cost(Ad, Bd, H, Wz, Wu):
     P = solve_discrete_are(Ad, Bd, Q, R)
     return Q, R, P
 
-def to_standard_QP(Ad, Bd, P, Q, R, U, N):
+def to_standard_QP(Ad, Bd, H, P, Q, R, U, N, Z=None):
     """
     Convert problem:
 
-    min xn^T P xn + sum_j=0^N-1 xj^T Q xj + uj^T R uj
+    min xN^T P xN + sum_j=0^N-1 xj^T Q xj + uj^T R uj
     s.t. x_k+1 = Ad x_k + Bd u_k
          u_k in U
+         Hx_k in Z
+         xN = 0
 
     into the dense standard form:
 
     min 0.5 * U^T F U + x_0^T G U
-    s.t. E U <= ub
+    s.t. E1 U <= e + E2 x_0
 
     where U = [u_0, ..., u_N-1]^T and x_0 is the initial
     condition parameter.
+
+    Note that if H and Z are none then no terminal constraint
+    is needed but P is needed. If H and Z are present then
+    the terminal constraint guarantees recursive feasibility
+    without having to compute Xf (challenging). In this case
+    P ends up not being needed anyways.
     """
     n, m = Bd.shape
     Qrep = [Q]*(N-1)
@@ -82,12 +89,34 @@ def to_standard_QP(Ad, Bd, P, Q, R, U, N):
 
         Sx[(i-1)*n:i*n, :] = M
 
+    # Cost function J = U^T F U + 2 x0^T G U
     F = np.matmul(Su.T, np.matmul(Qf, Su)) + Rf
     G = np.matmul(Sx.T, np.matmul(Qf, Su))
 
-    E = block_diag(*[U.A]*N)
-    ub = np.array([U.b]*N).flatten()
-    return F, G, E, ub
+    # Control constraints
+    E_u = block_diag(*[U.A]*N)
+    ub_u = np.array([U.b]*N).flatten()
+
+    # Performance and terminal constraints
+    if Z is not None:
+        E_z = block_diag(*[np.matmul(Z.A, H)]*(N-1))
+        ub_z = np.array([Z.b]*(N-1)).flatten()
+        E_z = block_diag(E_z, np.eye(n))
+        ub_z = np.hstack((ub_z, np.zeros(n)))
+
+        # Constraints E1 U < e + E2 x_0
+        E1 = np.vstack((E_u, np.matmul(E_z, Su)))
+        e = np.hstack((ub_u, ub_z))
+        E2 = np.vstack((np.zeros((ub_u.shape[0], n)), 
+                       -np.matmul(E_z, Sx)))
+
+    else:
+        # Constraints E1 U < e + E2 x_0
+        E1 = E_u
+        e = ub_u
+        E2 = np.zeros((ub_u.shape[0], n))
+
+    return F, G, E1, e, E2
 
 
 if __name__ == '__main__':
@@ -95,7 +124,7 @@ if __name__ == '__main__':
     if len(sys.argv) <= 3 or sys.argv[1] not in ['sgf', 'slf', 'stf'] \
         or sys.argv[2] not in ['gazebo', 'skywalker'] \
         or sys.argv[3] not in ['ctrl_surf', 'body_rate']:
-        print('Correct usage: python rompc_utils.py {sgf, slf, stf} {gazebo, skywalker} {ctrl_surf, body_rate}')
+        print('Correct usage: python mpc_synth.py {sgf, slf, stf} {gazebo, skywalker} {ctrl_surf, body_rate}')
         sys.exit()
    
     # Generate save directory if it doesn't exist
@@ -114,7 +143,7 @@ if __name__ == '__main__':
     u_eq = np.loadtxt(join(savepath, "u_eq.csv"), delimiter=",")
 
     # Compute discrete time system
-    dt = 0.05
+    dt = 0.1
     Ad, Bd = zoh(dt, A, B)
 
     # Compute cost matrices
@@ -124,25 +153,43 @@ if __name__ == '__main__':
     Q, R, P = cost(Ad, Bd, H, Wz, Wu)
 
     # Control constraints
-    if (sys.argv[2] == 'skywalker' or sys.argv[2] == 'gazebo') \
-         and sys.argv[3] == 'body_rate':
+    Z = None
+    if sys.argv[2] == 'skywalker' and sys.argv[3] == 'body_rate':
+
+        # Control u = [T, th1d, th2d, th3d] in [N, rad/s, rad/s, rad/s]
         Tref = u_eq[0]
-        uUB = np.array([10.0, np.deg2rad(20), np.deg2rad(20), np.deg2rad(20)])
-        uLB = np.array([-Tref, -np.deg2rad(20), -np.deg2rad(20), -np.deg2rad(20)])
+        uUB = np.array([10.0, np.deg2rad(100), np.deg2rad(100), np.deg2rad(100)])
+        uLB = np.array([-Tref, -np.deg2rad(100), -np.deg2rad(100), -np.deg2rad(100)])
         U = HyperRectangle(uUB, uLB)
+
+        # Performance z = [dxdot, dydot, dzdot, dx, dy, dz, dthx, dthy, dthz]
+        zUB = np.array([20, 20, 20, 100, 100, 100, np.deg2rad(45), np.deg2rad(45), np.deg2rad(45)])
+        zLB = -zUB
+        Z = HyperRectangle(zUB, zLB)
+
+    elif sys.argv[2] == 'skywalker' and sys.argv[3] == 'body_rate':
+        
+        # Control u = [T, ad, ed, rd] in [N, rad/s, rad/s, rad/s]
+        Tref = u_eq[0]
+        uUB = np.array([10.0, np.deg2rad(1000), np.deg2rad(1000), np.deg2rad(1000)])
+        uLB = np.array([-Tref, -np.deg2rad(1000), -np.deg2rad(1000), -np.deg2rad(1000)])
+        U = HyperRectangle(uUB, uLB)
+
+        # # Performance z = [pos_rate, rot_rate, pos, rot, ctrl_surf_def]
     else:
         print('Control constraints are not defined for this input set')
         sys.exit()
 
     # Define matrices
-    N = 20
-    F, G, E, ub = to_standard_QP(Ad, Bd, P, Q, R, U, N)
+    N = 50
+    F, G, E1, e, E2 = to_standard_QP(Ad, Bd, H, P, Q, R, U, N, Z=Z)
 
     print('Defining OCP with N = %d and dt = %.2f' % (N, dt))
     params = np.array([N, dt])
 
     np.savetxt(join(savepath, "F.csv"), F, delimiter=",")
     np.savetxt(join(savepath, "G.csv"), G, delimiter=",")
-    np.savetxt(join(savepath, "E.csv"), E, delimiter=",")
-    np.savetxt(join(savepath, "ub.csv"), ub, delimiter=",")
-    np.savetxt(join(savepath, "params.csv"), params, delimiter=",")
+    np.savetxt(join(savepath, "E1.csv"), E1, delimiter=",")
+    np.savetxt(join(savepath, "e.csv"), e, delimiter=",")
+    np.savetxt(join(savepath, "E2.csv"), E2, delimiter=",")
+    np.savetxt(join(savepath, "ocp_params.csv"), params, delimiter=",")

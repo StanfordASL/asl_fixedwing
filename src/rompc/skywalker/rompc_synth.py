@@ -11,8 +11,10 @@ from scipy.linalg import solve_continuous_are
 
 def cost_weights(ctrl_type):
     if ctrl_type == 'ctrl_surf':
-        print('ctrl_surf not implemented for skywalker')
-        sys.exit()
+        # z = [xd_r, yd_r, zd_r, th1d, th2d, th3d, x_r, y_r, z_r, th1, th2, th3, a, e, r]
+        # u = [T, ad, ed, rd]
+        Wz = np.diag([0.01, 0.01, 0.01, 100, 100, 100, 10, 10, 10, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
+        Wu = np.diag([10, 10, 10, 10])
     elif ctrl_type == 'body_rate':
         # z = [xd_r, yd_r, zd_r, x_r, y_r, z_r, th1, th2, th3]
         # u = [T, th1d, th2d, th3d]
@@ -47,12 +49,13 @@ def reducedOrderRiccati(A, B, C, H, Wz, Wu):
     return K, L
 
 if __name__ == '__main__':
-    if len(sys.argv) <= 1 or sys.argv[1] not in ['sgf', 'slf', 'stf']:
-        print('Correct usage: python rompc_synth.py {sgf, slf, stf}')
+    if len(sys.argv) <= 2 or sys.argv[1] not in ['sgf', 'slf', 'stf'] \
+            or sys.argv[2] not in ['ctrl_surf', 'body_rate']:
+        print('Correct usage: python rompc_synth.py {sgf, slf, stf} {ctrl_surf, body_rate}')
         sys.exit()
 
-    if sys.argv[1] in ['sgf', 'stf']:
-        print('SGF and STF not yet supported')
+    if sys.argv[1] in ['stf']:
+        print('STF not yet supported')
         sys.exit()
 
     # Generate save directory if it doesn't exist
@@ -67,9 +70,17 @@ if __name__ == '__main__':
     B = np.loadtxt(join(savepath, "B.csv"), delimiter=",")
     C = np.loadtxt(join(savepath, "C.csv"), delimiter=",")
     H = np.loadtxt(join(savepath, "H.csv"), delimiter=",")
+    if C.shape[0] == 15 and sys.argv[2] == 'ctrl_surf':
+        print('This does appear to be a ctrl_surf model')
+    elif C.shape[0] == 9 and sys.argv[2] == 'body_rate':
+        print('This does appear to be a body_rate model')
+    else:
+        print('Verify model is actually %s' % sys.argv[2])
+        sys.exit()
 
     # Compute controller gains
-    Wz, Wu = cost_weights('body_rate')
+    print('Saving controller to %s' % savepath)
+    Wz, Wu = cost_weights(sys.argv[2])
     K, L = reducedOrderRiccati(A, B, C, H, Wz, Wu)
     np.savetxt(join(savepath, "K.csv"), K, delimiter=",")
     np.savetxt(join(savepath, "L.csv"), L, delimiter=",")
