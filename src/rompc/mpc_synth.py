@@ -142,8 +142,11 @@ if __name__ == '__main__':
     H = np.loadtxt(join(savepath, "H.csv"), delimiter=",")
     u_eq = np.loadtxt(join(savepath, "u_eq.csv"), delimiter=",")
 
-    # Compute discrete time system
+    # Horizon and dt
+    N = 20
     dt = 0.1
+
+    # Compute discrete time system
     Ad, Bd = zoh(dt, A, B)
 
     # Compute cost matrices
@@ -152,38 +155,43 @@ if __name__ == '__main__':
     Wz, Wu = cost_weights(sys.argv[3])
     Q, R, P = cost(Ad, Bd, H, Wz, Wu)
 
-    # Control constraints
+    # Constraints
     Z = None
     if sys.argv[2] == 'skywalker' and sys.argv[3] == 'body_rate':
-
         # Control u = [T, th1d, th2d, th3d] in [N, rad/s, rad/s, rad/s]
         Tref = u_eq[0]
         uUB = np.array([10.0, np.deg2rad(100), np.deg2rad(100), np.deg2rad(100)])
         uLB = np.array([-Tref, -np.deg2rad(100), -np.deg2rad(100), -np.deg2rad(100)])
         U = HyperRectangle(uUB, uLB)
 
-        # Performance z = [dxdot, dydot, dzdot, dx, dy, dz, dthx, dthy, dthz]
-        zUB = np.array([20, 20, 20, 100, 100, 100, np.deg2rad(45), np.deg2rad(45), np.deg2rad(45)])
-        zLB = -zUB
-        Z = HyperRectangle(zUB, zLB)
+    elif sys.argv[2] == 'skywalker' and sys.argv[3] == 'ctrl_surf':
+        # Update horizon to be longer with state constraints
+        N = 50
 
-    elif sys.argv[2] == 'skywalker' and sys.argv[3] == 'body_rate':
-        
         # Control u = [T, ad, ed, rd] in [N, rad/s, rad/s, rad/s]
         Tref = u_eq[0]
         uUB = np.array([10.0, np.deg2rad(1000), np.deg2rad(1000), np.deg2rad(1000)])
         uLB = np.array([-Tref, -np.deg2rad(1000), -np.deg2rad(1000), -np.deg2rad(1000)])
         U = HyperRectangle(uUB, uLB)
 
-        # # Performance z = [pos_rate, rot_rate, pos, rot, ctrl_surf_def]
+        # Performance z = [pos_rate, rot_rate, pos, rot, ctrl_surf_def]
+        zUB = np.array([20, 20, 20, 
+                        np.deg2rad(1000), np.deg2rad(1000), np.deg2rad(1000),
+                        100, 100, 100, 
+                        np.deg2rad(45), np.deg2rad(45), np.deg2rad(45),
+                        np.deg2rad(30), np.deg2rad(30), np.deg2rad(30)])
+        zLB = -zUB
+        Z = HyperRectangle(zUB, zLB)
+
+        # For now just take the control surface deflection angles as constraints
+        Z = Polyhedron(Z.A[-6:,:], Z.b[-6:])
     else:
         print('Control constraints are not defined for this input set')
         sys.exit()
 
     # Define matrices
-    N = 50
     F, G, E1, e, E2 = to_standard_QP(Ad, Bd, H, P, Q, R, U, N, Z=Z)
-
+    
     print('Defining OCP with N = %d and dt = %.2f' % (N, dt))
     params = np.array([N, dt])
 

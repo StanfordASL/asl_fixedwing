@@ -219,12 +219,13 @@ ROMPC_UTILS::OCP::OCP(const std::string filepath, const double tmax)
                       : _success(false), _solve_time(0.0), _tmax(tmax) {  
     MatX F = Data::load_matrix(filepath + "/F.csv");
     _G = Data::load_matrix(filepath + "/G.csv");
-    MatX E = Data::load_matrix(filepath + "/E.csv");
-    VecX ubE = Data::load_matrix(filepath + "/ub.csv");
-    VecX params = Data::load_matrix(filepath + "/params.csv");
+    MatX E1 = Data::load_matrix(filepath + "/E1.csv");
+    _e = Data::load_matrix(filepath + "/e.csv");
+    _E2 = Data::load_matrix(filepath + "/E2.csv");
+    VecX params = Data::load_matrix(filepath + "/ocp_params.csv");
     
-    _nV = E.cols();
-    _nC = E.rows();
+    _nV = E1.cols();
+    _nC = E1.rows();
     _n = _G.rows();
     _dt = params(1); // discretization time in seconds
     _N = params(0); // horizon steps
@@ -238,24 +239,23 @@ ROMPC_UTILS::OCP::OCP(const std::string filepath, const double tmax)
 
     // Define constant problem data structures
     _F = ArrPtr(new qpOASES::real_t[_nV*_nV]);
-    _E = ArrPtr(new qpOASES::real_t[_nC*_nV]);
-    _ubE = ArrPtr(new qpOASES::real_t[_nC]);
+    _E1 = ArrPtr(new qpOASES::real_t[_nC*_nV]);
+    _ub = ArrPtr(new qpOASES::real_t[_nC]);
     _g = ArrPtr(new qpOASES::real_t[_nV]);
     _U = ArrPtr(new qpOASES::real_t[_nV]);
 
     eigen_to_qpoases(F, _F);
-    eigen_to_qpoases(E, _E);
-    eigen_to_qpoases(ubE, _ubE);
+    eigen_to_qpoases(E1, _E1);
 
     Eigen::VectorXd x0;
     x0.resize(_n);
     x0.setZero();
     set_x0(x0);
-
+    
     qpOASES::int_t nWSR = 1000;
     qpOASES::real_t cputime = _tmax;
-    qpOASES::returnValue st = _ocp.init(_F.get(), _g.get(), _E.get(), nullptr, nullptr, 
-                              nullptr, _ubE.get(), nWSR, &cputime);
+    qpOASES::returnValue st = _ocp.init(_F.get(), _g.get(), _E1.get(), nullptr, nullptr, 
+                              nullptr, _ub.get(), nWSR, &cputime);
 
     if (st == qpOASES::SUCCESSFUL_RETURN) _success = true;
     else _success = false;
@@ -277,6 +277,7 @@ void ROMPC_UTILS::OCP::eigen_to_qpoases(const MatX& M, ArrPtr& m) {
 */
 void ROMPC_UTILS::OCP::set_x0(const VecX x0) {
     eigen_to_qpoases(x0.transpose()*_G, _g);
+    eigen_to_qpoases(_e + _E2*x0, _ub);
 }
 
 /**
@@ -294,7 +295,7 @@ void ROMPC_UTILS::OCP::solve(const VecX x0, Vec4& uopt) {
     qpOASES::int_t nWSR = 1000;
     qpOASES::real_t comptime = _tmax;
     qpOASES::returnValue st = _ocp.hotstart(_g.get(), nullptr, nullptr, 
-                                        nullptr, _ubE.get(), nWSR, &comptime);
+                                        nullptr, _ub.get(), nWSR, &comptime);
 
     if (st == qpOASES::SUCCESSFUL_RETURN) {
         _ocp.getPrimalSolution(_U.get());

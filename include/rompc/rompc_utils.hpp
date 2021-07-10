@@ -119,10 +119,12 @@ private:
     int _nC; // number of constraints
     int _n; // state dimension
     MatX _G; // J = 1/2 U^T F U + x0^T G U
+    MatX _E2; // s.t. E1 U <= ub = e + E2 x0
+    VecX _e;
     
     ArrPtr _F;
-    ArrPtr _E; // s.t. E U <= ubE
-    ArrPtr _ubE;
+    ArrPtr _E1;
+    ArrPtr _ub;
     ArrPtr _g; // g = x0^T * G
     ArrPtr _U; // solution vector U = [u0, ..., u_N-1]
 

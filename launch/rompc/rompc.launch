@@ -36,6 +36,6 @@
         <param name="CTRL_TYPE" value="body_rate" />
         <param name="TARGET_TYPE" value="slf" />
         <param name="MODEL_TYPE" value="cfd" />
-        <param name="QP_TMAX" value="0.005" />
+        <param name="QP_TMAX" value="0.008" />
 	</node>
 </launch>
