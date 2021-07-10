@@ -159,6 +159,13 @@ void Rot::quat_to_axis(const Eigen::Vector4d& q, Eigen::Vector3d& aa) {
         aa(0) = m*q(1);
         aa(1) = m*q(2);
         aa(2) = m*q(3);
+
+        // Scale to keep magnitude less than pi
+        double th = aa.norm();
+        if (th > M_PI) {
+            double th_new = 2 * M_PI - th;
+            aa = -(th_new/th)*aa;
+        }
     }
 }
 
