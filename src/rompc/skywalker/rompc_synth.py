@@ -19,7 +19,7 @@ def cost_weights(ctrl_type):
         # z = [xd_r, yd_r, zd_r, x_r, y_r, z_r, th1, th2, th3]
         # u = [T, th1d, th2d, th3d]
         Wz = np.diag([0.01, 0.01, 0.01, 10, 10, 10, 0.1, 0.1, 0.1])
-        Wu = np.diag([10, 100, 100, 100])
+        Wu = np.diag([10, 200, 200, 200])
     else:
         print('Control type %s not known.' % ctrl_type)
         sys.exit()
@@ -36,7 +36,7 @@ def reducedOrderRiccati(A, B, C, H, Wz, Wu):
     Qz = np.matmul(Qz.T, Qz) + .000001*np.eye(A.shape[0])
     
     # Increase Qw to make measurements have more influence
-    Qw = 10*np.eye(A.shape[0])
+    Qw = 100*np.eye(A.shape[0])
 
     # Solve Riccati equations
     X = solve_continuous_are(A, B, Qz, R)

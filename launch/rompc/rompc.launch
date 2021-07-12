@@ -30,12 +30,12 @@
     -->
 	<node pkg="asl_fixedwing" type="rompc_node" name="rompc_node" output="screen">
 		<param name="T_RESET" value="2.0" />
-		<param name="CTRL_RATE" value="100.0" />
+		<param name="CTRL_RATE" value="20.0" />
         <param name="CTRL_PATH" value="$(find asl_fixedwing)/src/rompc/" />
         <param name="MODEL" value="skywalker" />
         <param name="CTRL_TYPE" value="body_rate" />
         <param name="TARGET_TYPE" value="slf" />
         <param name="MODEL_TYPE" value="cfd" />
-        <param name="QP_TMAX" value="0.008" />
+        <param name="QP_TMAX" value="0.01" />
 	</node>
 </launch>
