@@ -31,7 +31,7 @@ ROMPC::ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type,
              const unsigned target_type, const unsigned model_type, double dt, 
              const std::string filepath, const double tmax, const bool debug)
              : _ctrl_type(ctrl_type), _target_type(target_type), 
-             _model_type(model_type), _debug(debug), _ocp(filepath, tmax) {
+             _model_type(model_type), _dt(dt), _debug(debug), _ocp(filepath, tmax) {
     
     // Define control type
     if (_ctrl_type == CTRL_SURF) {
@@ -90,6 +90,8 @@ ROMPC::ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type,
     else {
         ROS_INFO("QP initial solve FAILED"); 
     }
+    _Ad = Data::load_matrix(filepath + "/Ad.csv");
+    _Bd = Data::load_matrix(filepath + "/Bd.csv");
     
     // Load controller parameters from file
 	_A = Data::load_matrix(filepath + "/A.csv");
@@ -105,7 +107,6 @@ ROMPC::ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type,
 
     // Compute QR decompositions for implicit Euler
     _M_est.compute(MatX::Identity(_n, _n) - dt*(_A - _L*_C));
-    _M_rom.compute(MatX::Identity(_n, _n) - dt*_A);
 
     // ROS publishers
     _e_pos_pub = nh.advertise<geometry_msgs::PointStamped>
@@ -147,7 +148,7 @@ ROMPC::ROMPC(ros::NodeHandle& nh, const unsigned ctrl_type,
     _zhat.setZero();
     _zbar.setZero();
     _q_R_to_B.setZero();
-    _t0 = _t = _t_qp = 0.0;
+    _t0 = _t = _t_ROM = 0.0;
 }
 
 /**
@@ -166,7 +167,7 @@ void ROMPC::init(const double t0, const Vec3 p, const double psi) {
     
     _init = true;
     _t = t0;
-    _t_qp = t0 - _qp_dt;
+    _t_ROM = t0 - _qp_dt;
 }
 
 /**
@@ -301,32 +302,33 @@ void ROMPC::update(const double t, const Vec3 p_b_i_I, const Vec3 v_b_I_B,
     @brief Update the control based on new mesurements
 */
 void ROMPC::update_ctrl(const double t, const Vec4 u_prev) {
-    double dt = t - _t; // time step since last update
     _t = t;
-
     // Update state estimate from previous step using backward Euler
-    _xhat = _M_est.solve(_xhat + dt*_B*u_prev + dt*_L*_y); // backward Euler
+    _xhat = _M_est.solve(_xhat + _dt*_B*u_prev + _dt*_L*_y); // backward Euler
     _zhat = _H*_xhat;
-    
+     
     // Update simulated ROM
-    if (!_started) {
-        _ubar = u_prev - _K*(_xhat - _xbar);
-    }
-    else if (t >= _t_qp) {
-        _t_qp = t + _qp_dt;
-        _ocp.solve(_xbar, _ubar);
-        if (!_ocp.success()) ROS_INFO("QP solver failed or ran out of time");
-        
-        if (_debug) {
-            std_msgs::Float32 time;
-            time.data = 1000.0*_ocp.solve_time();
-            _qptime_pub.publish(time);
+    if (t >= _t_ROM) {
+        _t_ROM = t + _qp_dt;
+
+        if (!_started) {
+            _ubar = u_prev - _K*(_xhat - _xbar);
         }
+        else {
+            _ocp.solve(_xbar, _ubar);
+            if (!_ocp.success()) ROS_INFO("QP solver failed or ran out of time");
+
+            if (_debug) {
+                std_msgs::Float32 time;
+                time.data = 1000.0*_ocp.solve_time();
+                _qptime_pub.publish(time);
+            }
+        }
+        
+        _xbar = _Ad*_xbar + _Bd*_ubar;
+        _zbar = _H*_xbar; 
     }
-    
-    _xbar = _M_rom.solve(_xbar + dt*_B*_ubar); // backward Euler
-    _zbar = _H*_xbar;
-    
+
     // Control law
     if (!_started) _u = _K*_xhat;
     else _u = _ubar + _K*(_xhat - _xbar);

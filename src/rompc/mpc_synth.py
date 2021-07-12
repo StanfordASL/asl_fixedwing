@@ -195,6 +195,8 @@ if __name__ == '__main__':
     print('Defining OCP with N = %d and dt = %.2f' % (N, dt))
     params = np.array([N, dt])
 
+    np.savetxt(join(savepath, "Ad.csv"), Ad, delimiter=",")
+    np.savetxt(join(savepath, "Bd.csv"), Bd, delimiter=",")
     np.savetxt(join(savepath, "F.csv"), F, delimiter=",")
     np.savetxt(join(savepath, "G.csv"), G, delimiter=",")
     np.savetxt(join(savepath, "E1.csv"), E1, delimiter=",")

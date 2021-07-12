@@ -69,9 +69,10 @@ private:
     MatX _H; // ... matrices
     int _n; // state dimensior
     Eigen::HouseholderQR<MatX> _M_est; // I - dt*(A-LC) factorized
-    Eigen::HouseholderQR<MatX> _M_rom; // I - dt*A factorized
 
     ROMPC_UTILS::OCP _ocp; // optimal control problem
+    MatX _Ad; // discrete time ROM matrix with _ocp dt
+    MatX _Bd; // discrete time control matrix with _ocp dt
 
     VecX _xbar; // nominal ROM state
     Vec4 _ubar; // nominal ROM control
@@ -81,10 +82,11 @@ private:
     VecX _y; // measurement
     VecX _zhat; // estimated output variables
     VecX _zbar; // nominal output variables
-
+    
+    double _dt; // control rate
     double _t0; // initialization time (s)
     double _t; // last update time (s)
-    double _t_qp; // last time qp was solved (s)
+    double _t_ROM; // last time ROM was updated (s)
     double _qp_dt; // discretization time of MPC
     bool _init = false;
     bool _started = false;
