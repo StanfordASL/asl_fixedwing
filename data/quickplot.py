@@ -4,7 +4,9 @@ import sys
 import numpy as np
 import pdb
 
-from utils import get_data_dir, RosbagData, aadot_to_om
+from utils import get_data_dir, RosbagData, get_utils_dir
+sys.path.append(get_utils_dir())
+from rotation import aadot_to_om
 
 if __name__ == '__main__':
     if len(sys.argv) <= 1 or sys.argv[1] not in ['std', 'cfd']:
