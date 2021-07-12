@@ -102,7 +102,8 @@ int main(int argc, char **argv) {
 
     // Initialize controller
     bool debug = true;
-    ROMPC ctrl(nh, CTRL_TYPE, TARGET_TYPE, MODEL_TYPE, 1.0/CTRL_RATE, filepath, QP_TMAX, debug);
+    double dt = 1.0/CTRL_RATE;
+    ROMPC ctrl(nh, CTRL_TYPE, TARGET_TYPE, MODEL_TYPE, dt, filepath, QP_TMAX, debug);
 
     // Define rate for the node
     ros::Rate rate(CTRL_RATE);
@@ -117,7 +118,6 @@ int main(int argc, char **argv) {
     // Main loop, until ROS shutdown
     double t = ros::Time::now().toSec();
     double t_last_reset = t;
-    double dt;
     while(ros::ok()) {
         // Each call to spinOnce will result in subscriber callbacks
         ros::spinOnce();
@@ -145,9 +145,9 @@ int main(int argc, char **argv) {
         
         // Update controller wih new measurement information
         ctrl.update(t, pos, vel, euler, om, thrust, ctrl_srf);
-        dt = ros::Time::now().toSec()-t;
-        //ROS_INFO("dt = %.3f", dt);
-        
+        if (ros::Time::now().toSec() - t > 1.1*dt) {
+            ROS_INFO("ROMPC is running > 10%% too slow");
+        }
 
         // Send control
         plane.send_control(ctrl.get_ctrl(t));

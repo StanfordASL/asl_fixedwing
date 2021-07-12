@@ -249,6 +249,7 @@ void ROMPC::update(const double t, const Vec3 p_b_i_I, const Vec3 v_b_I_B,
         ROMPC_UTILS::om_to_aadot(e_att, om_B_R_B, e_attrate);
 
         if (_ctrl_type == CTRL_SURF) {
+            ROS_INFO("THIS MEASUREMENT VECTOR ORDER IS WRONG");
             _y << e_vel, p_b_r_R, e_attrate, e_att;
             u_prev << T, ctrl_srf;
         }
