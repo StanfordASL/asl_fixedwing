@@ -170,5 +170,31 @@ if __name__ == '__main__':
         ax.legend()
     axs4[0].set_xlim(t0, tf)
 
+    # QP solve times
+    tmean = np.mean(data.rompc.qp_solve_time.z)
+    tmin = np.min(data.rompc.qp_solve_time.z)
+    tmax = np.max(data.rompc.qp_solve_time.z)
+    print("QP solve times (milliseconds):")
+    print("Mean: %.1f, Min: %.1f, Max: %.1f" %(tmean, tmin, tmax))
+
+    plt.figure()
+    plt.hist(data.rompc.qp_solve_time.z, bins=100)
+    plt.xlabel('Solve Time (ms)')
+    plt.ylabel('Frequency')
+
+    # Controller frequency
+    t = np.array(data.rompc.zhat.t)
+    dt = 1000*(t[1:] - t[:-1])
+    dtmean = np.mean(dt)
+    dtmin = np.min(dt)
+    dtmax = np.max(dt)
+    print("Controller frequency (milliseconds):")
+    print("Mean: %.1f, Min: %.1f, Max: %.1f" %(dtmean, dtmin, dtmax))
+
+    plt.figure()
+    plt.hist(1000.0/dt, bins=100)
+    plt.xlabel('Controller Rate (Hz)')
+    plt.ylabel('Frequency')
+
     plt.show()
 
