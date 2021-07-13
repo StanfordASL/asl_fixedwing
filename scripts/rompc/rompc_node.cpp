@@ -133,6 +133,7 @@ int main(int argc, char **argv) {
         
         // If offboard mode not yet set, periodically reset controller
         if (plane.px4_mode() != "OFFBOARD" && t - t_last_reset > T_RESET) {
+            ctrl.stop(); // Stop if it had been previously started
             ctrl.init(t, pos, euler(2));
             ROS_INFO("Initializing ROMPC controller");
             t_last_reset = t;

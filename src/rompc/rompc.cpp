@@ -163,7 +163,7 @@ void ROMPC::init(const double t0, const Vec3 p, const double psi) {
     
     // Set ROMPC state estimate and reference system to zero
     _xhat.setZero();
-	_xbar.setZero();
+    _xbar.setZero();
     
     _init = true;
     _t = t0;
@@ -175,6 +175,13 @@ void ROMPC::init(const double t0, const Vec3 p, const double psi) {
 */
 void ROMPC::start() {
     _started = true;
+}
+
+/**
+    @brief Stop the ROMPC scheme
+*/
+void ROMPC::stop() {
+    _started = false;
 }
 
 /**
