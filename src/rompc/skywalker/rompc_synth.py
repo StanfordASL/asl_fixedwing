@@ -13,20 +13,24 @@ def cost_weights(ctrl_type):
     if ctrl_type == 'ctrl_surf':
         # z = [xd_r, yd_r, zd_r, th1d, th2d, th3d, x_r, y_r, z_r, th1, th2, th3, a, e, r]
         # u = [T, ad, ed, rd]
+        # y = z
         Wz = np.diag([0.01, 0.01, 0.01, 100, 100, 100, 10, 10, 10, 0.1, 0.1, 0.1, 1, 1, 1])
         Wu = np.diag([10, 1, 1, 1])
+        Wy = np.diag([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.00001, 0.00001, 0.00001])
     elif ctrl_type == 'body_rate':
         # z = [xd_r, yd_r, zd_r, x_r, y_r, z_r, th1, th2, th3]
         # u = [T, th1d, th2d, th3d]
+        # y = z
         Wz = np.diag([0.01, 0.01, 0.01, 10, 10, 10, 0.1, 0.1, 0.1])
         Wu = np.diag([10, 200, 200, 200])
+        Wz = np.diag([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
     else:
         print('Control type %s not known.' % ctrl_type)
         sys.exit()
     
-    return Wz, Wu
+    return Wz, Wu, Wy
 
-def reducedOrderRiccati(A, B, C, H, Wz, Wu):
+def reducedOrderRiccati(A, B, C, H, Wz, Wu, Wy):
     """
     Compute controller gains by solving Riccati equations
     assuming the model is continuous time.
@@ -34,13 +38,14 @@ def reducedOrderRiccati(A, B, C, H, Wz, Wu):
     R = np.matmul(Wu.T, Wu)
     Qz = np.matmul(Wz, H)
     Qz = np.matmul(Qz.T, Qz) + .000001*np.eye(A.shape[0])
+    Qy = np.matmul(Wy.T, Wy)
     
     # Increase Qw to make measurements have more influence
     Qw = 100*np.eye(A.shape[0])
 
     # Solve Riccati equations
     X = solve_continuous_are(A, B, Qz, R)
-    Y = solve_continuous_are(A.T, C.T, Qw, np.eye(C.shape[0]))
+    Y = solve_continuous_are(A.T, C.T, Qw, Qy)
 
     # Compute controller gains
     K = -np.matmul(np.linalg.inv(R), np.matmul(B.T, X))
@@ -80,8 +85,8 @@ if __name__ == '__main__':
 
     # Compute controller gains
     print('Saving controller to %s' % savepath)
-    Wz, Wu = cost_weights(sys.argv[2])
-    K, L = reducedOrderRiccati(A, B, C, H, Wz, Wu)
+    Wz, Wu, Wy = cost_weights(sys.argv[2])
+    K, L = reducedOrderRiccati(A, B, C, H, Wz, Wu, Wy)
     np.savetxt(join(savepath, "K.csv"), K, delimiter=",")
     np.savetxt(join(savepath, "L.csv"), L, delimiter=",")
 
