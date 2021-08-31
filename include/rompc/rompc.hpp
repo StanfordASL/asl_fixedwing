@@ -28,6 +28,7 @@ public:
              const std::string filepath, const double tmax, const bool debug = false);
 	void init(const double t0, const Vec3 p, const double psi);
     void start();
+    void stop();
 	void update(const double t, const Vec3 p_b_i_I, const Vec3 v_b_I_B, 
                 const Vec3 euler, const Vec3 om_B_I_B, const double T,
                 const Vec3 ctrl_srf); 
